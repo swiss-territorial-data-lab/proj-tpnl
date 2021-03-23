@@ -56,21 +56,6 @@ def compose_tiles( csv_row, tile_split ):
     # Return list
     return poly_list
 
-def polygon_intersect( polygon, geo_label ):
-
-    # This function is reponsible to search in the labels if at least one label
-    # is part of the provided tile polygon. The tile polygon is a rectangle
-    # which represent the tile coverage.
-
-    # iterate over polygon geometries
-    for index, row in geo_label.iterrows():
-
-        # Compute intersection
-        if polygon.intersects( row['geometry'] ) == True:
-
-            # Break search on intersection
-            return True
-
 if __name__ == "__main__":
 
 
@@ -206,21 +191,18 @@ if __name__ == "__main__":
                 # Parsing polygon list
                 for poly in poly_list:
 
-                    # Check if labels are available for the tile
-                    if polygon_intersect( poly, geo_label ) == True:
+                    # Retreive polygon bounding box
+                    poly_bbox = poly.bounds
 
-                        # Retreive polygon bounding box
-                        poly_bbox = poly.bounds
+                    # Add tile geometry
+                    geo_tiling.loc[index,'geometry'] = poly
 
-                        # Add tile geometry
-                        geo_tiling.loc[index,'geometry'] = poly
+                    # Add tile required columns
+                    geo_tiling.loc[index,'id'   ] = f"({poly_bbox[0]}, {poly_bbox[1]}, 80)"
+                    geo_tiling.loc[index,'title'] = f"XYZ tile ({poly_bbox[0]}, {poly_bbox[1]}, 80)"
 
-                        # Add tile required columns
-                        geo_tiling.loc[index,'id'   ] = f"({poly_bbox[0]}, {poly_bbox[1]}, 80)"
-                        geo_tiling.loc[index,'title'] = f"XYZ tile ({poly_bbox[0]}, {poly_bbox[1]}, 80)"
-
-                        # Update index
-                        index = index + 1
+                    # Update index
+                    index = index + 1
 
         # set geographical frame
         geo_tiling.set_crs( crs = cfg['tiling']['srs'], inplace = True )
@@ -232,6 +214,9 @@ if __name__ == "__main__":
 
         # Abort
         sys.exit(1)
+
+    # Spatial join based on label to eliminate empty tiles
+    geo_tiling = gpd.sjoin(geo_tiling, geo_label, how="inner")
 
     # Export labels into geojson, forcing epsg:4326
     geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
