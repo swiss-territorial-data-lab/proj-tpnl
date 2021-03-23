@@ -209,12 +209,15 @@ if __name__ == "__main__":
                     # Check if labels are available for the tile
                     if polygon_intersect( poly, geo_label ) == True:
 
+                        # Retreive polygon bounding box
+                        poly_bbox = poly.bounds
+
                         # Add tile geometry
                         geo_tiling.loc[index,'geometry'] = poly
 
                         # Add tile required columns
-                        geo_tiling.loc[index,'id'   ] = f"({row['x_min']}, {row['y_min']}, 80)"
-                        geo_tiling.loc[index,'title'] = f"XYZ tile ({row['x_min']}, {row['y_min']}, 80)"
+                        geo_tiling.loc[index,'id'   ] = f"({poly_bbox[0]}, {poly_bbox[1]}, 80)"
+                        geo_tiling.loc[index,'title'] = f"XYZ tile ({poly_bbox[0]}, {poly_bbox[1]}, 80)"
 
                         # Update index
                         index = index + 1

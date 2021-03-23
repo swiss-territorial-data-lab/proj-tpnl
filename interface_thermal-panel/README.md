@@ -8,7 +8,7 @@ This script uses the standard _yaml_ configuration file of the object detector b
 
 The script is used in the following way :
 
-    $ python3 prepare_data.py --config [yaml\_config] [--logger [logging\_config]]
+    $ python3 prepare_data.py --config [yaml_config] [--logger [logging_config]]
 
 The section of the _yaml_ configuration file is expected as follows :
 
