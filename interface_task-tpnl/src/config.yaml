@@ -2,7 +2,7 @@ prepare_data.py:
   tiling:
     csv: ./tiles
     srs: "EPSG:2056"
-    split: 3
+    split: 1
   label:
     shapefile: nw_thm_labels.shp
   output_folder: ../output
