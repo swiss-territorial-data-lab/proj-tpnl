@@ -29,7 +29,16 @@ giving the tile bounding box. The _CSV_ file is specified using the _csv_ key in
 
 The _split_ key in the tiling section allows the script to divide the tiles into sub-tiles.
 
-Currently, the label are provided through a simple _shapefile_ contiaing the polygon of the labels.
+Currently, the label are provided through a simple _shapefile_ containing the polygon of the labels.
+
+## Ressources
+
+Two files are provided along the prepare script :
+
+* config.yaml example
+* logging.conf example
+
+The logging format file can be used as provided. The configuration _YAML_ has to be adapted in terms of input and output location and files.
 
 ## Training and Validation
 
