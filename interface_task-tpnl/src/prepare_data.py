@@ -209,12 +209,16 @@ if __name__ == "__main__":
                     # Retreive polygon bounding box
                     poly_bbox = poly.bounds
 
+                    # Compose tile synthetic coordinates
+                    syn_x = int( poly_bbox[0] )
+                    syn_y = int( poly_bbox[1] )
+
                     # Add tile geometry
                     geo_tiling.loc[index,'geometry'] = poly
 
                     # Add tile required columns
-                    geo_tiling.loc[index,'id'   ] = f"({poly_bbox[0]}, {poly_bbox[1]}, 80)"
-                    geo_tiling.loc[index,'title'] = f"XYZ tile ({poly_bbox[0]}, {poly_bbox[1]}, 80)"
+                    geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 80)"
+                    geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 80)"
 
                     # Update index
                     index = index + 1
