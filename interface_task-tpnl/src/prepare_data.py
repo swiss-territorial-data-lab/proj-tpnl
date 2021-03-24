@@ -19,17 +19,41 @@ from tqdm import tqdm
 
 def compose_tiles( csv_row, tile_split ):
 
-    # This function is responsible of transforming the provided bounding box,
-    # through the CSV row (dict), into rectangular tiles covering the bounding
-    # box. The amount of tile is deduced from the split value, which gives,
-    # when squared, the amount of computed tiles. The tiles are Polygon returned
-    # through a list.
+    """
+    Overview :
 
-    # Compose origin
+    This function is responsible of transforming the provided bounding box,
+    through the CSV row (dict), into rectangular tiles covering the bounding
+    box.
+
+    The amount of tile is deduced from the split value, which gives, when
+    squared, the amount of computed tiles. The tiles are Polygon returned
+    through a list.
+
+    Parameter :
+
+    csv_row : DictReader row
+
+        CSV row giving the bounding box (x_min, y_min, x_max, y_max).
+
+    tile_split : integer value
+
+        Bounding box split value. Providing one produce one tile covering the
+        bounding box. Providing two lead to four equal tiles covering the
+        bounding box.
+
+    Return :
+
+    List : Shaply polygon list
+
+        Return the tiles geometry through a list of polygons.
+    """
+
+    # Compose bounding box origin
     org_x = float( csv_row['x_min'] )
     org_y = float( csv_row['y_min'] )
 
-    # Compose Edges
+    # Compute tiles edge
     egde_x = ( float( csv_row['x_max'] ) - float( csv_row['x_min'] ) ) / tile_split
     egde_y = ( float( csv_row['y_max'] ) - float( csv_row['y_min'] ) ) / tile_split
 
@@ -53,11 +77,10 @@ def compose_tiles( csv_row, tile_split ):
 
             ] ) )
 
-    # Return list
+    # Return polygon list
     return poly_list
 
 if __name__ == "__main__":
-
 
     # Argument and parameter specification
     parser = argparse.ArgumentParser(description="Front-end for data preparation in the context of thermal panels detection (STDL.TASK-TPNL)")
@@ -67,16 +90,15 @@ if __name__ == "__main__":
 
     try:
 
-        # Logger configuration
+        # Logger configuration used to format script output
         logging.config.fileConfig('logging.conf')
         logger = logging.getLogger('root')
 
     except:
 
-        # Display message
+        # Display message & abort
         print('Unable to access logger configuration file')
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Chronometer
@@ -84,7 +106,7 @@ if __name__ == "__main__":
 
     try:
 
-        # Import configuration file
+        # Import configuration file (YAML file)
         with open(args.config) as fp:
             cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
 
@@ -93,10 +115,9 @@ if __name__ == "__main__":
 
     except:
     
-        # Logging info
+        # Logging info & abort
         logger.error(f"Unable to access {args.config} configuration file")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Check YAML key
@@ -108,42 +129,38 @@ if __name__ == "__main__":
 
     else:
 
-        # Logging info
+        # Logging info & abort
         logger.error("Key <output_folder> missing")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Check YAML key
     if not 'label' in cfg:
 
-        # Logging info
+        # Logging info & abort
         logger.error("Missing label key")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Check YAML key
     if 'shapefile' in cfg['label']:
 
-        # Import label geometry from shapefile
+        # Import label geometries from shapefile
         geo_label = gpd.read_file( cfg['label']['shapefile'] )
 
     else:
 
-        # Logging info
+        # Logging info & abort
         logger.error("Missing source in label")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Check YAML key
     if not 'tiling' in cfg:
 
-        # Logging info
+        # Logging info & abort
         logger.error("Missing tiling key")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
     # Check YAML key
@@ -152,19 +169,17 @@ if __name__ == "__main__":
         # Check YAML key
         if not 'srs' in cfg['tiling']:
 
-            # Logging info
+            # Logging info & abort
             logger.error("Missing srs key in tiling")
-
-            # Abort
+            sys.stderr.flush()
             sys.exit(1)
 
         # Check YAML key
         if not 'split' in cfg['tiling']:
 
-            # Logging info
+            # Logging info & abort
             logger.error("Missing split key in tiling")
-
-            # Abort
+            sys.stderr.flush()
             sys.exit(1)
 
         # Match label and tiling coordinate frame
@@ -173,11 +188,11 @@ if __name__ == "__main__":
         # Initialise tiling geometry
         geo_tiling = gpd.GeoDataFrame()
 
-        # Import CSV data
+        # Import CSV data for tiling computation
         with open( cfg['tiling']['csv'], newline='') as csvfile:
 
             # Read CSV by dictionnary
-            csvdata=csv.DictReader(csvfile, delimiter=',')
+            csvdata = csv.DictReader(csvfile, delimiter=',')
 
             # Initialise index
             index=0
@@ -204,24 +219,23 @@ if __name__ == "__main__":
                     # Update index
                     index = index + 1
 
-        # set geographical frame
+        # set geographical frame of tiling geometry
         geo_tiling.set_crs( crs = cfg['tiling']['srs'], inplace = True )
 
     else:
 
-        # Logging info
+        # Logging info & abort
         logger.error("Missing source in tiling")
-
-        # Abort
+        sys.stderr.flush()
         sys.exit(1)
 
-    # Spatial join based on label to eliminate empty tiles
+    # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one label)
     geo_tiling = gpd.sjoin(geo_tiling, geo_label, how="inner")
 
-    # Export labels into geojson, forcing epsg:4326
+    # Export labels into geojson, forcing epsg:4326 standard
     geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
 
-    # Export tiles into geojson, forcing epsg:4326
+    # Export tiles into geojson, forcing epsg:4326 standard
     geo_tiling.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'tiles.geojson'),driver='GeoJSON')
 
     # Chronometer
