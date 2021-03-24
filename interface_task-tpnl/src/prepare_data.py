@@ -232,6 +232,9 @@ if __name__ == "__main__":
     # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one label)
     geo_tiling = gpd.sjoin(geo_tiling, geo_label, how="inner")
 
+    # Drop spatial join duplicated geometries based on 'id' column
+    geo_tiling.drop_duplicates(subset=['id'],inplace=True)
+
     # Export labels into geojson, forcing epsg:4326 standard
     geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
 
