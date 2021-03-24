@@ -239,6 +239,12 @@ if __name__ == "__main__":
     # Drop spatial join duplicated geometries based on 'id' column
     geo_tiling.drop_duplicates(subset=['id'],inplace=True)
 
+    # Filtering columns on label dataframe
+    geo_label = geo_label.loc[:, ['geometry']]
+
+    # Filtering columns on tiling dataframe
+    geo_tiling = geo_tiling.loc[:, ['geometry', 'id', 'title']]
+
     # Export labels into geojson, forcing epsg:4326 standard
     geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
 
