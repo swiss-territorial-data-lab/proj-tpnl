@@ -10,8 +10,8 @@ prepare_data.py:
 generate_training_sets.py:
   debug_mode: False
   datasets:
-    aoi_tiles_geojson: ../output/aoi_tiles.geojson
-    ground_truth_labels_geojson: ../output/ground_truth_labels.geojson
+    aoi_tiles_geojson: ../output/tiles.geojson
+    ground_truth_labels_geojson: ../output/labels.geojson
     orthophotos_web_service:
       type: WMS # supported values: 1. MIL = Map Image Layer 2. WMS
       url: https://wms.geo.admin.ch/service
