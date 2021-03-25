@@ -6,16 +6,11 @@ import logging.config
 import time
 import argparse
 import yaml
-import os, sys, inspect
-import requests
+import os, sys
 import geopandas as gpd
-import pandas as pd
-import json
 import csv
 
 from shapely.geometry import Polygon
-from fiona.crs import from_epsg
-from tqdm import tqdm
 
 def compose_tiles( csv_row, tile_split ):
 
