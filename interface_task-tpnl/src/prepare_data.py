@@ -228,8 +228,19 @@ if __name__ == "__main__":
         sys.stderr.flush()
         sys.exit(1)
 
+    # Duplicate geodataframe (be sure to work on a copy, the original being exported at the end)
+    geo_label_shrink = geo_label.copy()
+
+    # Shrink label geometries
+    #
+    # As a spatial "inner" join is made after between tiles and labels, to only
+    # consider labelled tiles, shrinking the labels a bit allows to avoid
+    # keeping tiles that are only "touched" by a label but without a proper and
+    # relevant intersection.
+    geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=0.9, yfact=0.9, origin='centroid' )
+
     # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one label)
-    geo_tiling = gpd.sjoin(geo_tiling, geo_label, how="inner")
+    geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
 
     # Drop spatial join duplicated geometries based on 'id' column
     geo_tiling.drop_duplicates(subset=['id'],inplace=True)
