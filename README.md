@@ -19,4 +19,12 @@ This program is licensed under the terms of the GNU GPLv3. Documentation and ill
 
 ## Dependencies
 
-Need to be completed
+The _detector-interface_ comes with the following dependencies :
+
+* Python 3.6 or superior
+
+Packages can be installed either by pip or conda (*conda forge*):
+
+* geopandas 0.8.0
+
+* Shapely 1.7.1
