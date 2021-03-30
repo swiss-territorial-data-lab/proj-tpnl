@@ -14,11 +14,11 @@ The section of the _yaml_ configuration file is expected as follows :
 
     prepare_data.py:
       tiling:
-        csv: ./tiles
+        csv: [TILE_CSV_FILE]
         srs: "EPSG:2056"
-        split: 2
+        split: 1
       label:
-        shapefile: nw_thm_labels.shp
+        shapefile: [LABEL_SHAPEFILE]
       output_folder: ../output
 
 Currently, the input tiling definition is made through a simple _CSV_ file giving the bounding box of each tile to consider. Each _CSV_ are expected to contain at least the following values :
@@ -52,5 +52,6 @@ As the data are prepared using the proposed script, the following procedure can 
       gzip < images-256.tar > images-256.tar.gz && \
       rm images-256.tar
     $ cd -
-    $ python [detector_path]/scripts/make_predictions.py config_NE.yaml
+    $ python [detector_path]/scripts/train_model.py config_NE.yaml
+    $ python [detector_path]/scripts/make_prediction.py config_NE.yaml
     $ python [detector_path]/scripts/assess_predictions.py config_NE.yaml
