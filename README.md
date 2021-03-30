@@ -8,7 +8,7 @@ The proposed script are related to specific cases, and then specific data and fo
 
 The following links gives access to the specialised documentation of each interface, grouped by cases :
 
-* [TASK-TPNL : Thermal Panels (AG, NE)](interface_task-tpnl)
+* [Thermal Panels (TASK-TPNL)](interface_task-tpnl)
 
 ## Copyright and License
 
