@@ -141,6 +141,9 @@ if __name__ == "__main__":
         if not os.path.exists(cfg['output_folder']):
             os.makedirs(cfg['output_folder'])
 
+        # Logging info
+        logger.info(f"Create output directory")
+
     else:
 
         # Logging info & abort
@@ -161,6 +164,10 @@ if __name__ == "__main__":
 
         # Import label geometries from shapefile
         geo_label = gpd.read_file( cfg['label']['shapefile'] )
+
+        # Logging info
+        logger.info(f"Read from \"{cfg['label']['shapefile']}\" :")
+        logger.info(f"\t{len(geo_label)} label(s) imported")
 
     else:
 
@@ -198,6 +205,9 @@ if __name__ == "__main__":
 
         # Match label and tiling coordinate frame
         geo_label = geo_label.to_crs( cfg['tiling']['srs'] )
+
+        # Logging info
+        logger.info(f"SRS {cfg['tiling']['srs']} forced for label(s)")
 
         # Initialise tiling geometry
         geo_tiling = gpd.GeoDataFrame()
@@ -237,8 +247,15 @@ if __name__ == "__main__":
                     # Update index
                     index = index + 1
 
+        # Logging info
+        logger.info(f"Read from \"{cfg['tiling']['csv']}\" :")
+        logger.info(f"\t{index} tile(s) imported")
+
         # set geographical frame of tiling geometry
         geo_tiling.set_crs( crs = cfg['tiling']['srs'], inplace = True )
+
+        # Logging info
+        logger.info(f"SRS {cfg['tiling']['srs']} forced for tile(s)")
 
     else:
 
@@ -264,6 +281,10 @@ if __name__ == "__main__":
     # Drop spatial join duplicated geometries based on 'id' column
     geo_tiling.drop_duplicates(subset=['id'],inplace=True)
 
+    # Logging info
+    logger.info(f"Removed empty and quasi-empty tiles :")
+    logger.info(f"\t{len(geo_tiling)} tile(s) remaining")
+
     # Filtering columns on label dataframe
     geo_label = geo_label.loc[:, ['geometry']]
 
@@ -275,6 +296,11 @@ if __name__ == "__main__":
 
     # Export tiles into geojson, forcing epsg:4326 standard
     geo_tiling.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'tiles.geojson'),driver='GeoJSON')
+
+    # logging info    
+    logger.info(f"Written files in output directory :")
+    logger.info(f"\tlabels.geojson")
+    logger.info(f"\ttiles.geojson")
 
     # Chronometer
     toc = time.time()
