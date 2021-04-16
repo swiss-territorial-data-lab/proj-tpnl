@@ -97,10 +97,18 @@ def compose_tiles( csv_row, tile_split ):
 if __name__ == "__main__":
 
     # Argument and parameter specification
-    parser = argparse.ArgumentParser(description="Front-end for data preparation in the context of thermal panels detection (STDL.TASK-TPNL)")
+    parser = argparse.ArgumentParser(description="Front-end for data preparation in the context of thermal panels detection (STDL.PROJ-TPNL)")
     parser.add_argument('--config', type=str, help='Framework configuration file')
     parser.add_argument('--logger', type=str, help='Log configuration file', default='logging.conf')
     args = parser.parse_args()
+
+    # Section : Preliminar
+    #
+    # This section checks the configuration files and inputs the yaml file
+    # containing the configuration.
+
+    # Chronometer
+    tic = time.time()
 
     try:
 
@@ -114,9 +122,6 @@ if __name__ == "__main__":
         print('Unable to access logger configuration file')
         sys.stderr.flush()
         sys.exit(1)
-
-    # Chronometer
-    tic = time.time()
 
     try:
 
@@ -139,15 +144,25 @@ if __name__ == "__main__":
 
         # Create output directory if missing
         if not os.path.exists(cfg['output_folder']):
+
+            # Create directory
             os.makedirs(cfg['output_folder'])
 
-        # Logging info
-        logger.info(f"Create output directory")
+            # Logging info
+            logger.info(f"Created output directory")
 
     else:
 
         # Logging info & abort
         logger.error("Key <output_folder> missing")
+        sys.stderr.flush()
+        sys.exit(1)
+
+    # Check YAML key
+    if not 'srs' in cfg:
+
+        # Logging info & abort
+        logger.error("Key <srs> missing")
         sys.stderr.flush()
         sys.exit(1)
 
@@ -158,6 +173,19 @@ if __name__ == "__main__":
         logger.error("Missing label key")
         sys.stderr.flush()
         sys.exit(1)
+
+    # Check YAML key
+    if not 'tiling' in cfg:
+
+        # Logging info & abort
+        logger.error("Missing tiling key")
+        sys.stderr.flush()
+        sys.exit(1)
+
+    # Section : Label
+    #
+    # This section is dedicated to labels importation from the specified source
+    # geographic file.
 
     # Check YAML key
     if 'shapefile' in cfg['label']:
@@ -176,24 +204,19 @@ if __name__ == "__main__":
         sys.stderr.flush()
         sys.exit(1)
 
-    # Check YAML key
-    if not 'tiling' in cfg:
+    # Match label and tiling coordinate frame
+    geo_label = geo_label.to_crs( cfg['srs'] )
 
-        # Logging info & abort
-        logger.error("Missing tiling key")
-        sys.stderr.flush()
-        sys.exit(1)
+    # Logging info
+    logger.info(f"SRS {cfg['srs']} forced for label(s)")
+
+    # Section : Tiles
+    #
+    # This section is dedicated to tile definition importation and process
+    # according to the specified source.
 
     # Check YAML key
     if 'csv' in cfg['tiling']:
-
-        # Check YAML key
-        if not 'srs' in cfg['tiling']:
-
-            # Logging info & abort
-            logger.error("Missing srs key in tiling")
-            sys.stderr.flush()
-            sys.exit(1)
 
         # Check YAML key
         if not 'split' in cfg['tiling']:
@@ -202,12 +225,6 @@ if __name__ == "__main__":
             logger.error("Missing split key in tiling")
             sys.stderr.flush()
             sys.exit(1)
-
-        # Match label and tiling coordinate frame
-        geo_label = geo_label.to_crs( cfg['tiling']['srs'] )
-
-        # Logging info
-        logger.info(f"SRS {cfg['tiling']['srs']} forced for label(s)")
 
         # Initialise tiling geometry
         geo_tiling = gpd.GeoDataFrame()
@@ -241,8 +258,8 @@ if __name__ == "__main__":
                     geo_tiling.loc[index,'geometry'] = poly
 
                     # Add tile required columns
-                    geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 80)"
-                    geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 80)"
+                    geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
+                    geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
 
                     # Update index
                     index = index + 1
@@ -251,11 +268,31 @@ if __name__ == "__main__":
         logger.info(f"Read from \"{cfg['tiling']['csv']}\" :")
         logger.info(f"\t{index} tile(s) imported")
 
-        # set geographical frame of tiling geometry
-        geo_tiling.set_crs( crs = cfg['tiling']['srs'], inplace = True )
+    elif 'shapefile' in cfg['tiling']:
+
+        # Import tiles definition
+        geo_tiling = gpd.read_file( cfg['tiling']['shapefile'] )
+
+        # Remove all columns #
+        geo_tiling = geo_tiling.loc[:, ['geometry']]
+
+        # Iterates over geometries
+        for index in range(len(geo_tiling.index)):
+
+            # Get bounding box
+            poly_bbox = geo_tiling.loc[index,'geometry'].bounds
+
+            # Compose tile synthetic coordinates
+            syn_x = int( poly_bbox[0] )
+            syn_y = int( poly_bbox[1] )
+
+            # Add tile required columns
+            geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
+            geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
 
         # Logging info
-        logger.info(f"SRS {cfg['tiling']['srs']} forced for tile(s)")
+        logger.info(f"Read from \"{cfg['tiling']['shapefile']}\" :")
+        logger.info(f"\t{len(geo_tiling.index)} tile(s) imported")
 
     else:
 
@@ -264,18 +301,29 @@ if __name__ == "__main__":
         sys.stderr.flush()
         sys.exit(1)
 
+    # set geographical frame of tiling geometry
+    geo_tiling.set_crs( crs = cfg['srs'], inplace = True )
+
+    # Logging info
+    logger.info(f"SRS {cfg['srs']} forced for tile(s)")
+
     # Duplicate geodataframe (be sure to work on a copy, the original being exported at the end)
     geo_label_shrink = geo_label.copy()
 
-    # Shrink label geometries
+    # Section : Filter and export
     #
-    # As a spatial "inner" join is made after between tiles and labels, to only
+    # This section is dedicated to tile and label linked process and result
+    # exportation in the output directory.
+
+    # Note : Shrink label geometries
+    #
+    # As a spatial "inner" join is made considering tiles and labels to only
     # consider labelled tiles, shrinking the labels a bit allows to avoid
     # keeping tiles that are only "touched" by a label but without a proper and
     # relevant intersection.
     geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=0.9, yfact=0.9, origin='centroid' )
 
-    # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one label)
+    # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one clear label)
     geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
 
     # Drop spatial join duplicated geometries based on 'id' column

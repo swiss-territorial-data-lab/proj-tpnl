@@ -1,7 +1,7 @@
 prepare_data.py:
+  srs: "EPSG:2056"
   tiling:
     csv: [TILE_CSV_FILE]
-    srs: "EPSG:2056"
     split: 1
   label:
     shapefile: [LABEL_SHAPEFILE]
