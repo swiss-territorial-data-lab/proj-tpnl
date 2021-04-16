@@ -4,7 +4,7 @@ This set of scripts and data are related to the _thermal panel_ detection case. 
 
 ## Usage
 
-This script uses the standard _yaml_ configuration file of the object detector by adding its own section name after the script itself.
+This script uses the standard _yaml_ configuration file of the object detector by reading its dedicated section.
 
 The script is used in the following way :
 
@@ -13,23 +13,41 @@ The script is used in the following way :
 The section of the _yaml_ configuration file is expected as follows :
 
     prepare_data.py:
+      srs: "EPSG:2056"
       tiling:
         csv: [TILE_CSV_FILE]
-        srs: "EPSG:2056"
         split: 1
       label:
         shapefile: [LABEL_SHAPEFILE]
       output_folder: ../output
 
-Currently, the input tiling definition is made through a simple _CSV_ file giving the bounding box of each tile to consider. Each _CSV_ are expected to contain at least the following values :
+for tiles defined through _CSV_ file and :
+
+    prepare_data.py:
+      srs: "EPSG:2056"
+      tiling:
+        shapefile: [TILE_SHAPEFILE]
+      label:
+        shapefile: [LABEL_SHAPEFILE]
+      output_folder: ../output
+
+for tiles defined through a shapefile.
+
+In both case, the _srs_ key provides the working geographical frame in order for all the input data to work together.
+
+### CSV Specified Tiles
+
+The _CSV_ file has to give the bounding box of each tile to consider. Each _CSV_ are expected to contain at least the following values :
 
     x_min, y_min, x_max, y_max
 
-giving the tile bounding box. The _CSV_ file is specified using the _csv_ key in the _tiling_ section. The _srs_ key has to provide the coordinate frame of the data in the _CSV_ file.
+giving the tile bounding box coordinates. The _CSV_ file is specified using the _csv_ key in the _tiling_ section.
 
 The _split_ key in the tiling section allows the script to divide the tiles into sub-tiles.
 
-Currently, the label are provided through a simple _shapefile_ containing the polygon of the labels.
+### Shapefile Specified Tiles
+
+In case a _shapefile_ is used for tiles definition, it has to contain the tiles as simple _polygons_ providing the shape of each tile.
 
 ## Ressources
 

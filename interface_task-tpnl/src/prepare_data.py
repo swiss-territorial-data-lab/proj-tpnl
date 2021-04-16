@@ -302,7 +302,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # set geographical frame of tiling geometry
-    geo_tiling.set_crs( crs = cfg['srs'], inplace = True )
+    geo_tiling = geo_tiling.to_crs( crs = cfg['srs'] )
 
     # Logging info
     logger.info(f"SRS {cfg['srs']} forced for tile(s)")
