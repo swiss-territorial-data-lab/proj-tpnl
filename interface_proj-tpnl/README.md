@@ -1,6 +1,6 @@
 ## Overview
 
-This set of scripts and data are related to the _thermal panel_ detection case. The detector is trained on data of the _Aargau Kanton_ using _swissimage_ from _swisstopo_ and labels of the _solai_ project of the _FHNW_.
+This set of scripts and configuration files are related to the _thermal panel_ detection case. The detector is initially trained on data of the _Aargau Kanton_ using _swissimage_ from _swisstopo_ and labels of the _SolAI_ project of the _FHNW_.
 
 ## Usage
 
