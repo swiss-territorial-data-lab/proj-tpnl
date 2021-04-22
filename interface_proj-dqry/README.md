@@ -2,7 +2,6 @@
 
 This set of scripts and configuration files are related to the _quarry/exploitation sites_ detection case. The detector is initially trained on _swissimage_ from _swisstopo_ using the _TLM_ data of _swisstopo_ for the labels.
 
-
 ## Usage
 
 For this case, the _thermal panel (TPNL)_ case script is used. See its documentation on the [following page](../interface_proj-tpnl)
