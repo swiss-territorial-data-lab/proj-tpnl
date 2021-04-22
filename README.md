@@ -11,6 +11,12 @@ The following links gives access to the specialised documentation of each interf
 * [Thermal Panels (TPNL)](interface_proj-tpnl)
 * [Quarry (DQRY)](interface_proj-dqry)
 
+## Auxiliary Tools
+
+This repository comes with a few tools that can be useful to prepare the datasets :
+
+* [Tiles generator](tools/tile-generator)
+
 ## Copyright and License
 
 **detector-interface** - Nils Hamel, Adrian Meyer, Huriel Reichel, Alessandro Cerioni <br >
