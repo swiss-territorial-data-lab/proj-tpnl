@@ -8,8 +8,8 @@ The proposed script are related to specific cases, and then specific data and fo
 
 The following links gives access to the specialised documentation of each interface, grouped by cases :
 
-* [Thermal Panels (TPNL)](interface_task-tpnl)
-* [Quarry (DQRY) - Same as TPNL](interface_task-tpnl)
+* [Thermal Panels (TPNL)](interface_proj-tpnl)
+* [Quarry (DQRY)](interface_proj-dqry)
 
 ## Copyright and License
 
@@ -27,5 +27,4 @@ The _detector-interface_ comes with the following dependencies :
 Packages can be installed either by pip or conda (*conda forge*):
 
 * geopandas 0.8.0
-
 * Shapely 1.7.1
