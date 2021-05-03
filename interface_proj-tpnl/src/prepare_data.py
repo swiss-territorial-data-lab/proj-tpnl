@@ -167,12 +167,20 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Check YAML key
-    if not 'label' in cfg:
+    if 'label' in cfg:
+
+        # Check YAML key
+        if not 'redfact' in cfg['label']:
+
+            # Logging info & abort
+            logger.error("Missing reduction factor in label")
+            sys.stderr.flush()
+            sys.exit(1)            
+
+    else:
 
         # Logging info & abort
         logger.info("No labels provided")
-        #sys.stderr.flush()
-        #sys.exit(1)
 
     # Check YAML key
     if not 'tiling' in cfg:
@@ -267,6 +275,9 @@ if __name__ == "__main__":
                     # Update index
                     index = index + 1
 
+        # force crs for csv-defined tiles
+        geo_tiling = geo_tiling.set_crs( crs = cfg['srs'] )
+
         # Logging info
         logger.info(f"Read from \"{cfg['tiling']['csv']}\" :")
         logger.info(f"\t{index} tile(s) imported")
@@ -327,7 +338,7 @@ if __name__ == "__main__":
         # consider labelled tiles, shrinking the labels a bit allows to avoid
         # keeping tiles that are only "touched" by a label but without a proper and
         # relevant intersection.
-        geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=0.9, yfact=0.9, origin='centroid' )
+        geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=float( cfg['label']['redfact'] ), yfact=float( cfg['label']['redfact'] ), origin='centroid' )
 
         # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one clear label)
         geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
