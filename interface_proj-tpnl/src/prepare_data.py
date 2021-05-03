@@ -170,9 +170,9 @@ if __name__ == "__main__":
     if not 'label' in cfg:
 
         # Logging info & abort
-        logger.error("Missing label key")
-        sys.stderr.flush()
-        sys.exit(1)
+        logger.info("No labels provided")
+        #sys.stderr.flush()
+        #sys.exit(1)
 
     # Check YAML key
     if not 'tiling' in cfg:
@@ -188,27 +188,30 @@ if __name__ == "__main__":
     # geographic file.
 
     # Check YAML key
-    if 'shapefile' in cfg['label']:
+    if 'label' in cfg:
 
-        # Import label geometries from shapefile
-        geo_label = gpd.read_file( cfg['label']['shapefile'] )
+        # Check YAML key
+        if 'shapefile' in cfg['label']:
+
+            # Import label geometries from shapefile
+            geo_label = gpd.read_file( cfg['label']['shapefile'] )
+
+            # Logging info
+            logger.info(f"Read from \"{cfg['label']['shapefile']}\" :")
+            logger.info(f"\t{len(geo_label)} label(s) imported")
+
+        else:
+
+            # Logging info & abort
+            logger.error("Missing source in label")
+            sys.stderr.flush()
+            sys.exit(1)
+
+        # Match label and tiling coordinate frame
+        geo_label = geo_label.to_crs( cfg['srs'] )
 
         # Logging info
-        logger.info(f"Read from \"{cfg['label']['shapefile']}\" :")
-        logger.info(f"\t{len(geo_label)} label(s) imported")
-
-    else:
-
-        # Logging info & abort
-        logger.error("Missing source in label")
-        sys.stderr.flush()
-        sys.exit(1)
-
-    # Match label and tiling coordinate frame
-    geo_label = geo_label.to_crs( cfg['srs'] )
-
-    # Logging info
-    logger.info(f"SRS {cfg['srs']} forced for label(s)")
+        logger.info(f"SRS {cfg['srs']} forced for label(s)")
 
     # Section : Tiles
     #
@@ -307,47 +310,53 @@ if __name__ == "__main__":
     # Logging info
     logger.info(f"SRS {cfg['srs']} forced for tile(s)")
 
-    # Duplicate geodataframe (be sure to work on a copy, the original being exported at the end)
-    geo_label_shrink = geo_label.copy()
+    # Check YAML key
+    if 'label' in cfg:
 
-    # Section : Filter and export
-    #
-    # This section is dedicated to tile and label linked process and result
-    # exportation in the output directory.
+        # Duplicate geodataframe (be sure to work on a copy, the original being exported at the end)
+        geo_label_shrink = geo_label.copy()
 
-    # Note : Shrink label geometries
-    #
-    # As a spatial "inner" join is made considering tiles and labels to only
-    # consider labelled tiles, shrinking the labels a bit allows to avoid
-    # keeping tiles that are only "touched" by a label but without a proper and
-    # relevant intersection.
-    geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=0.9, yfact=0.9, origin='centroid' )
+        # Section : Filter and export
+        #
+        # This section is dedicated to tile and label linked process and result
+        # exportation in the output directory.
 
-    # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one clear label)
-    geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
+        # Note : Shrink label geometries
+        #
+        # As a spatial "inner" join is made considering tiles and labels to only
+        # consider labelled tiles, shrinking the labels a bit allows to avoid
+        # keeping tiles that are only "touched" by a label but without a proper and
+        # relevant intersection.
+        geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=0.9, yfact=0.9, origin='centroid' )
 
-    # Drop spatial join duplicated geometries based on 'id' column
-    geo_tiling.drop_duplicates(subset=['id'],inplace=True)
+        # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one clear label)
+        geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
 
-    # Logging info
-    logger.info(f"Removed empty and quasi-empty tiles :")
-    logger.info(f"\t{len(geo_tiling)} tile(s) remaining")
+        # Drop spatial join duplicated geometries based on 'id' column
+        geo_tiling.drop_duplicates(subset=['id'],inplace=True)
 
-    # Filtering columns on label dataframe
-    geo_label = geo_label.loc[:, ['geometry']]
+        # Logging info
+        logger.info(f"Removed empty and quasi-empty tiles :")
+        logger.info(f"\t{len(geo_tiling)} tile(s) remaining")
+
+        # Filtering columns on label dataframe
+        geo_label = geo_label.loc[:, ['geometry']]
+
+        # Export labels into geojson, forcing epsg:4326 standard
+        geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
+
+        # logging info    
+        logger.info(f"Written files in output directory :")
+        logger.info(f"\tlabels.geojson")
 
     # Filtering columns on tiling dataframe
     geo_tiling = geo_tiling.loc[:, ['geometry', 'id', 'title']]
-
-    # Export labels into geojson, forcing epsg:4326 standard
-    geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
 
     # Export tiles into geojson, forcing epsg:4326 standard
     geo_tiling.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'tiles.geojson'),driver='GeoJSON')
 
     # logging info    
     logger.info(f"Written files in output directory :")
-    logger.info(f"\tlabels.geojson")
     logger.info(f"\ttiles.geojson")
 
     # Chronometer
