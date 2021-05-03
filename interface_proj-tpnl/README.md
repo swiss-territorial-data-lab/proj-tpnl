@@ -19,6 +19,7 @@ The section of the _yaml_ configuration file is expected as follows :
         split: 1
       label:
         shapefile: [LABEL_SHAPEFILE]
+        redfact: 0.9
       output_folder: ../output
 
 for tiles defined through _CSV_ file and :
@@ -29,9 +30,12 @@ for tiles defined through _CSV_ file and :
         shapefile: [TILE_SHAPEFILE]
       label:
         shapefile: [LABEL_SHAPEFILE]
+        redfact: 0.9
       output_folder: ../output
 
-for tiles defined through a shapefile.
+for tiles defined through a shapefile. The lables section can be missing, indicating that tiles are prepared for inference only.
+
+The _redfact_ key allows to specify the reduction factor of the label that is performed before removing empty tiles (tiles with empty intersection with all labels). Reducing the labels before removing empty tiles allows to force tiles with small overlap with labels to be removed. This allows not to consider tiles with a small portion of label at its edges.
 
 In both case, the _srs_ key provides the working geographical frame in order for all the input data to work together.
 

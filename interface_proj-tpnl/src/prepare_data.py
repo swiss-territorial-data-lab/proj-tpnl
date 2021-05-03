@@ -321,16 +321,16 @@ if __name__ == "__main__":
     # Logging info
     logger.info(f"SRS {cfg['srs']} forced for tile(s)")
 
+    # Section : Filter and export
+    #
+    # This section is dedicated to tile and label linked process and result
+    # exportation in the output directory.
+
     # Check YAML key
     if 'label' in cfg:
 
         # Duplicate geodataframe (be sure to work on a copy, the original being exported at the end)
         geo_label_shrink = geo_label.copy()
-
-        # Section : Filter and export
-        #
-        # This section is dedicated to tile and label linked process and result
-        # exportation in the output directory.
 
         # Note : Shrink label geometries
         #

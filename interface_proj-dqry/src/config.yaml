@@ -4,6 +4,7 @@ prepare_data.py:
     shapefile: [TILE_SHAPEFILE]
   label:
     shapefile: [LABEL_SHAPEFILE]
+    redfact: 0.9
   output_folder: ../output
 
 generate_training_sets.py:
