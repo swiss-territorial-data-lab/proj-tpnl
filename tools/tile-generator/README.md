@@ -6,7 +6,7 @@ This script allows to create a user-specified tiles that covers the polygons spe
 
 The script is used based on a _shapefile_ containing one or more polygons :
 
-    $ python3 grid-generator.py --labels [polygon_shapefile] 
+    $ python3 tile-generator.py --labels [polygon_shapefile] 
                                 --size [tile_size]
                                 --output [output_directory]
                                 [--x-shift/--y-shift [grid origin shift]]
