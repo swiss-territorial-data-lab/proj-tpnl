@@ -16,6 +16,7 @@ The following links gives access to the specialised documentation of each interf
 This repository comes with a few tools that can be useful to prepare the datasets :
 
 * [Tiles generator](tools/tile-generator)
+* [Prediction extractor](tools/extract-prediction)
 
 ## Copyright and License
 
