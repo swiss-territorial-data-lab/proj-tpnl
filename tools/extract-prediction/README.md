@@ -2,11 +2,11 @@
 
 This script allows to extract the prediction out of the detector _GeoJSON_ based on a provided threshold value.
 
-The strategy consists in filtering the prediction through a provided threshold and to then merge overlapping predictions that passed the threshold filter.
+The prediction are first filtered based on their score value and the provided threshold value. Overlapping predictions are merged using a surface-weighted mean value for the score of the final prediction geometry.
 
 ## Usage
 
-The script expects then a prediction _GeoJSON_ file all geometry containing a _score_ value normalised in _[0,1]_ and the filtering threshold :
+The script expects then a prediction _GeoJSON_ file with all geometries containing a _score_ value normalised in _[0,1]_ and the filtering threshold :
 
     $ python3 extract-prediction.py --prediction [prediction GeoJSON]
                                     --score [threshold value]
@@ -24,4 +24,4 @@ The following images give an illustration of the extraction process showing the 
 <i>Left : Detector predictions - Right : Threshold filtering results</i>
 </p>
 
-The value of the filtering threshold is usually obtained by training analysis.
+The value of the filtering threshold is usually obtained by the training validation set analysis or other more advanced methods.
