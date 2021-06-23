@@ -13,7 +13,7 @@ The following links gives access to the specialised documentation of each interf
 
 ## Auxiliary Tools
 
-This repository comes with a few tools that can be useful to prepare the datasets :
+This repository comes with a few tools that can be useful to prepare or post-process the datasets :
 
 * [Tiles generator](tools/tile-generator)
 * [Prediction extractor](tools/extract-prediction)
