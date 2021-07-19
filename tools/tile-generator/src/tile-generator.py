@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # Argument and parameter specification
     parser = argparse.ArgumentParser(description="Tile generator tool (STDL)")
     parser.add_argument('--labels' , type=str  , help='Label geographic file')
-    parser.add_argument('--size'   , type=int, help='Tile size in meters' )
+    parser.add_argument('--size'   , type=int  , help='Tile size in meters' )
     parser.add_argument('--x-shift', type=float, help='Grid shift factor', default=0.)
     parser.add_argument('--y-shift', type=float, help='Grid shift factor', default=0.)
     parser.add_argument('--output' , type=str  , help='Output directory', default='.')
