@@ -17,6 +17,7 @@ This repository comes with a few tools that can be useful to prepare or post-pro
 
 * [Tiles generator](tools/tile-generator)
 * [Prediction extractor](tools/extract-prediction)
+* [Prediction filtering](tools/filter-prediction)
 
 ## Copyright and License
 
