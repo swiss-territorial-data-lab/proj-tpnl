@@ -23,7 +23,7 @@ In case _point_ is provided, the filtered predictions are transformed into point
 As an example, the following predictions, in red, are filtered according to the building footprints, in black. As prediction should correspond to thermal panel, one assumes that prediction make sense only inside the geometry of the city buildings.
 
 <p align="center">
-<img src="doc/prediction.webp?raw=true" width="35%">
+<img src="doc/prediction.webp?raw=true" width="45%">
 <br />
 <i>Thermal panels prediction (red) and building footprints (black) - STDL/SITG</i>
 </p>
@@ -31,9 +31,9 @@ As an example, the following predictions, in red, are filtered according to the 
 If the _mode_ is set to _inside_, the following outcome are obtained when setting _export_ parameter to _polygon and to _point_ :
 
 <p align="center">
-<img src="doc/inside.webp?raw=true" width="35%">
+<img src="doc/inside.webp?raw=true" width="45%">
 &nbsp;
-<img src="doc/inside-point.webp?raw=true" width="35%">
+<img src="doc/inside-point.webp?raw=true" width="45%">
 <br />
 <i>Inside filtering exported as polygons (left) and points (right) </i>
 </p>
@@ -43,9 +43,9 @@ The points are rendered with their corresponding geometry on the images, but the
 When the _mode_ is set to _outside_, the following outcomes are obtained :
 
 <p align="center">
-<img src="doc/outside.webp?raw=true" width="35%">
+<img src="doc/outside.webp?raw=true" width="45%">
 &nbsp;
-<img src="doc/outside-point.webp?raw=true" width="35%">
+<img src="doc/outside-point.webp?raw=true" width="45%">
 <br />
 <i>Inside filtering exported as polygons (left) and points (right) </i>
 </p>
