@@ -31,7 +31,7 @@ import csv
 
 from shapely.geometry import Polygon
 
-def compose_tiles( csv_row, tile_split ):
+def compose_tiles( x_min, y_min, x_max, y_max, tile_split ):
 
     """
     Overview :
@@ -64,12 +64,12 @@ def compose_tiles( csv_row, tile_split ):
     """
 
     # Compose bounding box origin
-    org_x = float( csv_row['x_min'] )
-    org_y = float( csv_row['y_min'] )
+    org_x = x_min
+    org_y = y_min
 
     # Compute tiles edge
-    egde_x = ( float( csv_row['x_max'] ) - float( csv_row['x_min'] ) ) / tile_split
-    egde_y = ( float( csv_row['y_max'] ) - float( csv_row['y_min'] ) ) / tile_split
+    egde_x = ( x_max - x_min ) / tile_split
+    egde_y = ( y_max - y_min ) / tile_split
 
     # Initialise polygon list
     poly_list=[]
@@ -253,7 +253,7 @@ if __name__ == "__main__":
             for row in csvdata:
 
                 # Compute polygon list
-                poly_list = compose_tiles( row, cfg['tiling']['split'] )
+                poly_list = compose_tiles( float( row['x_min'] ), float( row['y_min'] ), float( row['x_max'] ), float( row['y_max'] ), cfg['tiling']['split'] )
 
                 # Parsing polygon list
                 for poly in poly_list:
@@ -285,24 +285,48 @@ if __name__ == "__main__":
     elif 'shapefile' in cfg['tiling']:
 
         # Import tiles definition
-        geo_tiling = gpd.read_file( cfg['tiling']['shapefile'] )
+        geo_tiles = gpd.read_file( cfg['tiling']['shapefile'] )
 
         # Remove all columns #
-        geo_tiling = geo_tiling.loc[:, ['geometry']]
+        #geo_tiles = geo_tiles.loc[:, ['geometry']]
+
+        # Initialise tiling geometry
+        geo_tiling = gpd.GeoDataFrame()
+        
+        # Initialise index
+        index=0
 
         # Iterates over geometries
-        for index in range(len(geo_tiling.index)):
+        for unused, tile in geo_tiles.iterrows(): #range(len(geo_tiling.index)):
 
             # Get bounding box
-            poly_bbox = geo_tiling.loc[index,'geometry'].bounds
+            poly_bbox = tile['geometry'].bounds
 
-            # Compose tile synthetic coordinates
-            syn_x = int( poly_bbox[0] )
-            syn_y = int( poly_bbox[1] )
+            # Compute polygon list
+            poly_list = compose_tiles( poly_bbox[0], poly_bbox[1], poly_bbox[2], poly_bbox[3], cfg['tiling']['split'] )
 
-            # Add tile required columns
-            geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
-            geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
+            # Parsing polygon list
+            for poly in poly_list:
+
+                # Retreive polygon bounding box
+                poly_bbox = poly.bounds
+
+                # Compose tile synthetic coordinates
+                syn_x = int( poly_bbox[0] )
+                syn_y = int( poly_bbox[1] )
+
+                # Add tile geometry
+                geo_tiling.loc[index,'geometry'] = poly
+
+                # Add tile required columns
+                geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
+                geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
+
+                # Update index
+                index = index + 1
+
+        # force crs for csv-defined tiles
+        geo_tiling = geo_tiling.set_crs( crs = cfg['srs'] )
 
         # Logging info
         logger.info(f"Read from \"{cfg['tiling']['shapefile']}\" :")
