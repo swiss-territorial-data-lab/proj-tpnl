@@ -28,6 +28,7 @@ for tiles defined through _CSV_ file and :
       srs: "EPSG:2056"
       tiling:
         shapefile: [TILE_SHAPEFILE]
+        split: 1
       label:
         shapefile: [LABEL_SHAPEFILE]
         redfact: 0.9
@@ -52,6 +53,8 @@ The _split_ key in the tiling section allows the script to divide the tiles into
 ### Shapefile Specified Tiles
 
 In case a _shapefile_ is used for tiles definition, it has to contain the tiles as simple _polygons_ providing the shape of each tile.
+
+The _split_ key in the tiling section allows the script to divide the tiles into sub-tiles.
 
 ## Ressources
 
