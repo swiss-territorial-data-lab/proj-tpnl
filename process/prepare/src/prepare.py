@@ -25,8 +25,7 @@ import yaml
 import os, sys
 import glob
 import geopandas as gpd
-import gdal
-import osr
+from osgeo import gdal, osr
 import numpy
 
 from shapely.geometry import Polygon
