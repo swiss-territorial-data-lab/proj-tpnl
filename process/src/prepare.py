@@ -22,13 +22,21 @@
 
 import argparse
 import yaml
+import json
 import os, sys
 import glob
 import geopandas as gpd
-from osgeo import gdal, osr
 import numpy
 
+from osgeo import gdal, osr
 from shapely.geometry import Polygon
+
+# Add local library path for the import above this line
+sys.path.append( os.path.normpath( os.path.dirname( os.path.realpath(__file__) ) + '/../lib' ) )
+
+import COCO
+
+
 
 def prepare_split( length, split_seed, split_proportion ):
 
@@ -49,10 +57,11 @@ def prepare_split( length, split_seed, split_proportion ):
     return permute[0:trn_set], permute[trn_set:trn_set+tst_set], permute[trn_set+tst_set:trn_set+tst_set+val_set]
     
 
+
 def prepare_tile( tile_path, epsg ):
 
     # Prepare tile geoset
-    geo_tile = gpd.GeoDataFrame( columns=[ 'geometry', 'file' ], geometry='geometry' )
+    geo_tile = gpd.GeoDataFrame( columns=[ 'geometry', 'file', 'xsize', 'ysize', 'xmin', 'ymin', 'xmax', 'ymax' ], geometry='geometry' )
 
     # Initialise index
     index = 0
@@ -94,16 +103,145 @@ def prepare_tile( tile_path, epsg ):
         # Push tile uid
         geo_tile.loc[ index, "file" ] = os.path.basename( geotiff )
 
+        # Push tile pixel size
+        geo_tile.loc[ index, "xsize" ] = w
+        geo_tile.loc[ index, "ysize" ] = h
+
+        # Push tile geographical information
+        geo_tile.loc[ index, "xmin" ] = x_min
+        geo_tile.loc[ index, "ymin" ] = y_min
+        geo_tile.loc[ index, "xmax" ] = x_max
+        geo_tile.loc[ index, "ymax" ] = y_max
+
         # Update index
         index = index + 1
 
         # Developmend clamp (to make test on small amount of tile. Be sure
         # you disable the error raise on empty tile if you use this.
-        #if index > 50:
-        #    break
+        if index > 50:
+            break
 
     # Return tile layer
     return geo_tile.set_crs( epsg = epsg )
+
+
+def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco_class, coco_category, coco_output ):
+
+    # Create COCO object : see ../lib/COCO.py
+    coco = COCO.COCO()
+
+    # Set COCO file basic information
+    coco.set_info(
+        the_year=f"{coco_year}", 
+        the_version="1.0", 
+        the_description="STDL dataset", 
+        the_contributor="STDL", 
+        the_url="N/A"
+    )
+
+    # Insert COCO license
+    coco_license = coco.license(
+        the_name="On Demand (STDL)", 
+        the_url="N/A"
+    )
+    coco_license_id = coco.insert_license( coco_license )
+
+    # Insert COCO root class and category
+    coco_category = coco.category(
+        the_supercategory=coco_class,
+        the_name=coco_category
+    )
+    coco_category_id = coco.insert_category(coco_category)
+
+    # Parsing the tiles that are part of the provided split. These tiles are
+    # all the result of image listing in the data conformation directory.
+    for index in geo_index:
+
+        # Display progress
+        print( "COCO annotation : ", geo_tile.loc[index,"file"] )
+
+        # Prepare COCO annotation for this tile
+        coco_image = coco.image( coco_geotiff_path, geo_tile.loc[index,"file"], coco_license_id )
+
+        # Insert image in COCO file
+        coco_image_id = coco.insert_image( coco_image )
+
+        # Create list of all label parts that belongs to the current
+        # tile. This list is based on identifying the tile name appearing
+        # in each label entries of the link layer.
+        tile_labels = geo_link[ geo_link["file_right"] == geo_tile.loc[index,"file"] ]
+
+        # If the list of label that belongs to the current tile is empty,
+        # then something is wrong : no tile should be empty of any label
+        # or label part
+        if len( tile_labels ) == 0:
+            raise ValueError( f'The tile {geo_tile.loc[index,"file"]} has no label or label part' )
+
+        # Extract tile pixel size
+        tile_x = float( geo_tile.loc[index,"xsize"] )
+        tile_y = float( geo_tile.loc[index,"ysize"] )
+
+        # Extract tile geographical information
+        x_min = float( geo_tile.loc[index,"xmin"] )
+        y_min = float( geo_tile.loc[index,"ymin"] )
+        x_max = float( geo_tile.loc[index,"xmax"] )
+        y_max = float( geo_tile.loc[index,"ymax"] )
+
+        # Compute geographical span with pixel factor
+        x_span = tile_x / ( x_max - x_min )
+        y_span = tile_y / ( y_max - y_min )
+
+        #print( x_min, y_min, x_max, y_max, tile_x, tile_y, x_span, y_span )
+
+        # Parsing each labels that are associated to the current tile
+        for _, tile_label in tile_labels.iterrows():
+
+            # Extract label entity
+            label_entity = geo_label.loc[ tile_label["index_right"], "geometry" ]
+
+            # Assess label type
+            if type( label_entity ) != Polygon:
+                raise ValueError( f'Expects polygon for label, not {type( label_entity )}' )
+
+            # Extract coordinates of polygon
+            label_x, label_y = label_entity.exterior.coords.xy
+
+            # Python things ...
+            label_x = label_x.tolist()
+            label_y = label_y.tolist()
+
+            # Prepare compacted / xy-mixed coordinate list
+            compacted_coords = []
+
+            # Parsing coordinates
+            for i in range( len( label_x ) ):
+
+                # Convert coordinates from geographic to pixel and append to xy-mixed list
+                compacted_coords.append( + ( label_x[i] - x_min ) * x_span )
+                compacted_coords.append( - ( label_y[i] - y_min ) * y_span + tile_y )
+
+                # Assess coordinates
+                if compacted_coords[-2] < 0. or compacted_coords[-2] > tile_x:
+                    raise ValueError( 'Label x-coordinates are outside of tile span' )
+                if compacted_coords[-1] < 0. or compacted_coords[-1] > tile_y:
+                    raise ValueError( 'Label y-coordinates are outside of tile span' )
+
+            # Create COCO annotation
+            print( 'Create COCO annotation' )
+            coco_annotation = coco.annotation(
+                coco_image_id,
+                coco_category_id,
+                [compacted_coords],
+                the_iscrowd=0
+            )
+
+            # Insert COCO annotation
+            print( 'Insert COCO annotation' )
+            coco.insert_annotation( coco_annotation )
+
+    # Write composed COCO file by dumping COCO JSON content
+    with open( coco_output, 'w' ) as coco_stream:
+        json.dump( coco.to_json(), coco_stream )
 
 
 
@@ -254,19 +392,69 @@ if __name__ == "__main__":
             if common["debug"]:
                 geo_link.to_file( os.path.join( common["working"], 'tile-label-link.shp' ) )
 
+            # Create COCO annotation of the different sets. The differents sets
+            # are defined through the split procedure and the :
+            #
+            #   trn_index, tst_index, val_index
+            #
+            # arrays of index. Each array contains the tile index, according to
+            # the built :
+            #
+            #   geo_tile
+            #
+            # geographical layer, of each specific set : training, validation
+            # and testing. It follows that these array should not have any index
+            # in common.
+
+            # Create COCO annotation for the training set
+            tile_coco( 
+                geo_tile, 
+                geo_link, 
+                trn_index,
+                tile_path,
+                decomp[2], 
+                common["class"],
+                common["category"],
+                os.path.join( common["working"], 'COCO_trn.json' )
+            )
+
+            # Create COCO annotation for the testing set
+            tile_coco( 
+                geo_tile, 
+                geo_link, 
+                tst_index,
+                tile_path,
+                decomp[2], 
+                common["class"],
+                common["category"],
+                os.path.join( common["working"], 'COCO_tst.json' )
+            )
+
+            # Create COCO annotation for the validation set
+            tile_coco( 
+                geo_tile, 
+                geo_link, 
+                val_index,
+                tile_path,
+                decomp[2], 
+                common["class"],
+                common["category"],
+                os.path.join( common["working"], 'COCO_val.json' )
+            )
+
             # Parsing each tile based on listed geotiff in dataset
-            for index, single_tile in geo_tile.iterrows():
+            #for index, single_tile in geo_tile.iterrows():
 
                 # Create list of all label parts that belongs to the current
                 # tile. This list is based on identifying the tile name appearing
                 # in each label entries of the link layer.
-                selection = geo_link[ geo_link["file_right"] == single_tile["file"] ]
+            #    selection = geo_link[ geo_link["file_right"] == single_tile["file"] ]
 
                 # If the list of label that belongs to the current tile is empty,
                 # then something is wrong : no tile should be empty of any label
                 # or label part
-                if len( selection ) == 0:
-                    raise ValueError( f'The tile {single_tile["file"]} has no label or label part' )
+           #     if len( selection ) == 0:
+           #         raise ValueError( f'The tile {single_tile["file"]} has no label or label part' )
 
                 # Need to be done :
                 #

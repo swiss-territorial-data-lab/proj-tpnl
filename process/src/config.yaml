@@ -1,6 +1,8 @@
 common:
     debug: True
-    working: ./output
+    working: &working_folder ./output
+    class: 'Energy'
+    category: 'Thermal panels'
 
 prepare.py:
     dataset: /media/user/head_loop1/loop_405e-5f-dc22/405e-5f-dc22_hades/hades_atlas/atlas_set/set_thermal-panel
