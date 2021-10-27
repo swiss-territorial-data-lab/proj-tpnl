@@ -257,6 +257,7 @@ if __name__ == "__main__":
     # Process command line
     args = parser.parse_args()
 
+
     # Check configuration file
     try:
 
@@ -274,6 +275,7 @@ if __name__ == "__main__":
         else:
             print( error )
         sys.exit(1)
+
 
     # Check configuration content
     try:
@@ -293,6 +295,7 @@ if __name__ == "__main__":
             print( error )
         sys.exit(1)
 
+
     # Try importing conformation content
     try:
 
@@ -310,6 +313,7 @@ if __name__ == "__main__":
     # Debug
     if common["debug"]:
         print( conformation )
+
 
     # Check exportation path
     try:
@@ -329,7 +333,25 @@ if __name__ == "__main__":
             print( error.message )
         else:
             print( error )
-        sys.exit(1)
+        sys.exit(1)  
+
+
+    # Move default detectron2 configuration ymal from script cfg folder
+    try:
+
+        # Copy configuration file
+        shutil.copyfile( 
+            os.path.join( os.path.dirname(__file__), '../cfg/detectron2_config.yaml' 
+            os.path.join( common["working"], 'detectron2_config.yaml' )
+        )
+
+    except Exception as error:
+        if hasattr( error, 'message' ):
+            print( error.message )
+        else:
+            print( error )
+        sys.exit(1)  
+
 
 
     # Prepare data from dataset
