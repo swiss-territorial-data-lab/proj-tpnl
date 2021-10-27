@@ -24,6 +24,7 @@ import argparse
 import yaml
 import json
 import os, sys
+import shutil
 import glob
 import geopandas as gpd
 import numpy
@@ -125,7 +126,7 @@ def prepare_tile( tile_path, epsg ):
     return geo_tile.set_crs( epsg = epsg )
 
 
-def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco_class, coco_category, coco_output ):
+def tile_coco( geo_tile, geo_link, geo_index, set_geotiff_path, coco_year, coco_class, coco_category, coco_geotiff_path, coco_output ):
 
     # Create COCO object : see ../lib/COCO.py
     coco = COCO.COCO()
@@ -160,8 +161,12 @@ def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco
         # Display progress
         print( "COCO annotation : ", geo_tile.loc[index,"file"] )
 
+        # Copy image from dataset to source. See note [NOTE.IMAGE.COPY] in this
+        # script.
+        shutil.copyfile( os.path.join( set_geotiff_path, geo_tile.loc[index,"file"] ), os.path.join( coco_geotiff_path, geo_tile.loc[index,"file"] ) )
+
         # Prepare COCO annotation for this tile
-        coco_image = coco.image( coco_geotiff_path, geo_tile.loc[index,"file"], coco_license_id )
+        coco_image = coco.image( '', os.path.join( coco_geotiff_path, geo_tile.loc[index,"file"] ), coco_license_id )
 
         # Insert image in COCO file
         coco_image_id = coco.insert_image( coco_image )
@@ -190,8 +195,6 @@ def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco
         # Compute geographical span with pixel factor
         x_span = tile_x / ( x_max - x_min )
         y_span = tile_y / ( y_max - y_min )
-
-        #print( x_min, y_min, x_max, y_max, tile_x, tile_y, x_span, y_span )
 
         # Parsing each labels that are associated to the current tile
         for _, tile_label in tile_labels.iterrows():
@@ -227,7 +230,6 @@ def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco
                     raise ValueError( 'Label y-coordinates are outside of tile span' )
 
             # Create COCO annotation
-            print( 'Create COCO annotation' )
             coco_annotation = coco.annotation(
                 coco_image_id,
                 coco_category_id,
@@ -236,7 +238,6 @@ def tile_coco( geo_tile, geo_link, geo_index, coco_geotiff_path, coco_year, coco
             )
 
             # Insert COCO annotation
-            print( 'Insert COCO annotation' )
             coco.insert_annotation( coco_annotation )
 
     # Write composed COCO file by dumping COCO JSON content
@@ -317,12 +318,19 @@ if __name__ == "__main__":
         if not os.path.isdir( common["working"] ):
             os.mkdir( common["working"] )
 
+        # On debug mode, check for debug exportation directory
+        if common["debug"]:
+            debug_path=os.path.join( common["working"], 'debug' )
+            if not os.path.isdir( debug_path ):
+                os.mkdir( debug_path )
+
     except Exception as error:
         if hasattr( error, 'message' ):
             print( error.message )
         else:
             print( error )
         sys.exit(1)
+
 
     # Prepare data from dataset
     try:
@@ -370,14 +378,14 @@ if __name__ == "__main__":
 
             # Debug
             if common["debug"]:
-                geo_tile.to_file( os.path.join( common["working"], 'tile.shp' ) )
+                geo_tile.to_file( os.path.join( debug_path, 'tile.shp' ) )
 
             # Split label based on the tile bounding box -> Distribution of label parts on tiles
             geo_label = gpd.overlay( geo_label, geo_tile, how="intersection" )
 
             # Debug
             if common["debug"]:
-                geo_label.to_file( os.path.join( common["working"], 'label-on-tile.shp' ) )
+                geo_label.to_file( os.path.join( debug_path, 'label-on-tile.shp' ) )
 
             # Compose split index array
             trn_index, tst_index, val_index = prepare_split( len( geo_tile ), config["split_seed"], config["split_prop"] )
@@ -390,7 +398,30 @@ if __name__ == "__main__":
 
             # Debug
             if common["debug"]:
-                geo_link.to_file( os.path.join( common["working"], 'tile-label-link.shp' ) )
+                geo_link.to_file( os.path.join( debug_path, 'tile-label-link.shp' ) )
+
+            # [NOTE.IMAGE.COPY]
+            #
+            # Compose folder for training image. Formally, this operation is
+            # not required, as the image are stored in the dataset folder.
+            #
+            # This choice is made to keep alive the previous STDL doxa and to
+            # apply a step-by-step development strategy
+
+            # Temporary change of current directory
+            push_cwd = os.getcwd()
+            os.chdir( common["working"] )
+
+            # Create image folder for each set
+            trn_path = 'image_trn'
+            if not os.path.isdir( trn_path ):
+                os.mkdir( trn_path )
+            tst_path = 'image_tst'
+            if not os.path.isdir( tst_path ):
+                os.mkdir( tst_path )
+            val_path = 'image_val'
+            if not os.path.isdir( val_path ):
+                os.mkdir( val_path )
 
             # Create COCO annotation of the different sets. The differents sets
             # are defined through the split procedure and the :
@@ -415,6 +446,7 @@ if __name__ == "__main__":
                 decomp[2], 
                 common["class"],
                 common["category"],
+                trn_path,
                 os.path.join( common["working"], 'COCO_trn.json' )
             )
 
@@ -427,6 +459,7 @@ if __name__ == "__main__":
                 decomp[2], 
                 common["class"],
                 common["category"],
+                tst_path,
                 os.path.join( common["working"], 'COCO_tst.json' )
             )
 
@@ -439,51 +472,12 @@ if __name__ == "__main__":
                 decomp[2], 
                 common["class"],
                 common["category"],
+                val_path,
                 os.path.join( common["working"], 'COCO_val.json' )
             )
 
-            # Parsing each tile based on listed geotiff in dataset
-            #for index, single_tile in geo_tile.iterrows():
-
-                # Create list of all label parts that belongs to the current
-                # tile. This list is based on identifying the tile name appearing
-                # in each label entries of the link layer.
-            #    selection = geo_link[ geo_link["file_right"] == single_tile["file"] ]
-
-                # If the list of label that belongs to the current tile is empty,
-                # then something is wrong : no tile should be empty of any label
-                # or label part
-           #     if len( selection ) == 0:
-           #         raise ValueError( f'The tile {single_tile["file"]} has no label or label part' )
-
-                # Need to be done :
-                #
-                # For each tile -> create the COCO annotation based on the label
-                # list (selection). The geographic transfromation need to be
-                # applied to convert label geographical coordinates to image
-                # pixel coordinates
-
-                # Need to be done :
-                #
-                # Make sure the image are copied on the working directory for   
-                # them to be available for the training of the detector. In
-                # addition, COCO annotation must contain the path of the tile
-                # image file.
-
-                # Development assessment segment : confirm that all label for each tile are considered
-                #geo_test = gpd.GeoDataFrame( columns=[ 'geometry' ], geometry='geometry' )
-                #if len( selection ) > 0:
-                #    for test_index, test_tile in selection.iterrows():
-                #        print( "\t", test_index, test_tile["FID"] )
-                #        geo_test.loc[ test_index, "geometry" ] = geo_label.loc[ test_tile["index_right"], "geometry" ]
-                #    geo_test.loc[ len(geo_test), "geometry" ] = single_tile["geometry"]
-                #    geo_test.set_crs( epsg = decomp[3] ).to_file( os.path.join( common["working"], f'{index}-tile.shp' ) )
-
-            # Development : temporary confirmation prints
-            #print( len( geo_tile ) )
-            #print( len( trn_index ), trn_index )
-            #print( len( tst_index ), tst_index )
-            #print( len( val_index ), val_index )
+        # Restore current directory
+        os.chdir( push_cwd )
 
     except Exception as error:
         if hasattr( error, 'message' ):

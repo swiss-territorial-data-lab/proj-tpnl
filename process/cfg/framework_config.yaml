@@ -1,6 +1,6 @@
 common:
     debug: True
-    working: &working_folder ../output
+    working: &working_folder ./output
     class: 'Energy'
     category: 'Thermal panels'
 
@@ -11,7 +11,7 @@ prepare.py:
     split_prop: [ 0.7, 0.15, 0.15 ]
 
 train_model.py:
-    working_folder: *working_folder
+    working_folder: ../output
     log_subfolder: logs
     sample_tagged_img_subfolder: sample_tagged_images
     COCO_files: # relative paths, w/ respect to the working_folder
