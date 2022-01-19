@@ -1,7 +1,7 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 
-#  Detector interface
+#  prepare_data
 #
 #      Nils Hamel - nils.hamel@alumni.epfl.ch
 #      Huriel Reichel
