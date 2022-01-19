@@ -17,12 +17,14 @@ This repository comes with a few tools that can be useful to prepare or post-pro
 
 * [Tiles generator](tools/tile-generator)
 * [Prediction extractor](tools/extract-prediction)
-* [Prediction filtering](tools/filter-prediction)
+* [Predictions filtering](tools/filter-prediction)
+* [Predictions thresholding](tools/prediction-thresholding)
+* [Image query](tools/wmts-geoquery)
 
 ## Copyright and License
 
 **detector-interface** - Nils Hamel, Adrian Meyer, Huriel Reichel, Alessandro Cerioni <br >
-Copyright (c) 2020-2021 Republic and Canton of Geneva
+Copyright (c) 2020-2022 Republic and Canton of Geneva
 
 This program is licensed under the terms of the GNU GPLv3. Documentation and illustrations are licensed under the terms of the CC BY 4.0.
 

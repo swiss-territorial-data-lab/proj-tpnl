@@ -5,7 +5,7 @@
 #
 #      Nils Hamel - nils.hamel@alumni.epfl.ch
 #      Huriel Reichel
-#      Copyright (c) 2020-2021 Republic and Canton of Geneva
+#      Copyright (c) 2020-2022 Republic and Canton of Geneva
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
