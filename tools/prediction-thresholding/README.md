@@ -2,8 +2,9 @@
 
 This script allows to extract the prediction out of the detector _GeoJSON_ based on a series of provided threshold values.
 
-The prediction are first filtered based on their polygons' ares value, then through score value. Following, with the input of a Digital Elevation Model an elevation thresholding is processed. Finally the predicition polygons are joined (spatial join) with a distance criteria. 
+The first step going on is a clustering of the centroids of every prediction polygon. This is used as a way to maintain the scores for a further unary union of the polygons, that then uses the cluster value assigned as an aggregation method. This allows the removal of lower scores in a smarter way, *i.e.*, by maintaining the integrity of the final polygon. Then, predictions are filtered based on the polygons' areas value. Following, with the input of a Digital Elevation Model an elevation thresholding is processed. Finally, the predictions are filtered based on score. This score is calculated as the maximum score obtained from the polygons intersecting the merged polygons.
 
+It is important to mention that this sequence was modified on the 26th of November 2021. Predictions weren't once aesthetic, especially with smaller tiles. As the old procedure was used for the delivery of results before, it is for now maintaned in the past-filter branch of this repository.
 ## Usage
 
 The script expects then a prediction _GeoJSON_ file with all geometries containing a _score_ value normalised in _[0,1]_ and the filtering threshold :
