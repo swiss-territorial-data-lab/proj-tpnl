@@ -1,2 +1,4 @@
 dev
 lib
+input/*
+output/*
