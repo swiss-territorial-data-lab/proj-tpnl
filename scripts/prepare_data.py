@@ -116,6 +116,7 @@ if __name__ == "__main__":
     with open(args.config_file) as fp:
         cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
 
+
     # Check YAML key
     if 'output_folder' in cfg:
 
