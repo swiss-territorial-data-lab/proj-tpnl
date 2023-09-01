@@ -20,19 +20,26 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
-import logging.config
+import os
+import sys
 import time
 import argparse
 import yaml
-import os, sys
+from loguru import logger
+
 import geopandas as gpd
 import csv
 
 from shapely.geometry import Polygon
 
-def compose_tiles( x_min, y_min, x_max, y_max, tile_split ):
+# the following allows us to import modules from within this file's parent folder
+sys.path.insert(0, '.')
 
+logger.remove()
+logger.add(sys.stderr, format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}", level="INFO")
+
+
+def compose_tiles( x_min, y_min, x_max, y_max, tile_split ):
     """
     Overview :
 
@@ -68,76 +75,46 @@ def compose_tiles( x_min, y_min, x_max, y_max, tile_split ):
     org_y = y_min
 
     # Compute tiles edge
-    egde_x = ( x_max - x_min ) / tile_split
-    egde_y = ( y_max - y_min ) / tile_split
+    egde_x = (x_max - x_min) / tile_split
+    egde_y = (y_max - y_min) / tile_split
 
     # Initialise polygon list
-    poly_list=[]
+    poly_list = []
 
     # Parsing x-axis
-    for x in range( tile_split ):
+    for x in range(tile_split):
 
         # Parsing y-axis
-        for y in range( tile_split ):
+        for y in range(tile_split):
 
             # Compose and append polygon
-            poly_list.append( Polygon( [
-
-                ( org_x + egde_x * ( x     ), org_y + egde_y * ( y     ) ),
-                ( org_x + egde_x * ( x + 1 ), org_y + egde_y * ( y     ) ),
-                ( org_x + egde_x * ( x + 1 ), org_y + egde_y * ( y + 1 ) ),
-                ( org_x + egde_x * ( x     ), org_y + egde_y * ( y + 1 ) ),
-                ( org_x + egde_x * ( x     ), org_y + egde_y * ( y     ) )
-
+            poly_list.append(Polygon([
+                (org_x + egde_x * x, org_y + egde_y * y),
+                (org_x + egde_x * (x + 1), org_y + egde_y * y),
+                (org_x + egde_x * (x + 1), org_y + egde_y * (y + 1)),
+                (org_x + egde_x * x, org_y + egde_y * (y + 1)),
+                (org_x + egde_x * x, org_y + egde_y * y)
             ] ) )
 
-    # Return polygon list
+
     return poly_list
+
 
 if __name__ == "__main__":
 
+    # Start chronometer
+    tic = time.time()
+    logger.info('Starting...')
+
     # Argument and parameter specification
     parser = argparse.ArgumentParser(description="Front-end for data preparation in the context of thermal panels detection (STDL.PROJ-TPNL)")
-    parser.add_argument('--config', type=str, help='Framework configuration file')
-    parser.add_argument('--logger', type=str, help='Log configuration file', default='logging.conf')
+    parser.add_argument('config_file', type=str, help='Framework configuration file')
     args = parser.parse_args()
 
-    # Section : Preliminar
-    #
-    # This section checks the configuration files and inputs the yaml file
-    # containing the configuration.
+    logger.info(f"Using {args.config_file} as config file.")
 
-    # Chronometer
-    tic = time.time()
-
-    try:
-
-        # Logger configuration used to format script output
-        logging.config.fileConfig('logging.conf')
-        logger = logging.getLogger('root')
-
-    except:
-
-        # Display message & abort
-        print('Unable to access logger configuration file')
-        sys.stderr.flush()
-        sys.exit(1)
-
-    try:
-
-        # Import configuration file (YAML file)
-        with open(args.config) as fp:
-            cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
-
-        # Logging info
-        logger.info(f"Using {args.config} as config file.")
-
-    except:
-    
-        # Logging info & abort
-        logger.error(f"Unable to access {args.config} configuration file")
-        sys.stderr.flush()
-        sys.exit(1)
+    with open(args.config_file) as fp:
+        cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
 
     # Check YAML key
     if 'output_folder' in cfg:
@@ -247,13 +224,13 @@ if __name__ == "__main__":
             csvdata = csv.DictReader(csvfile, delimiter=',')
 
             # Initialise index
-            index=0
+            index = 0
 
             # Iterate over CSV rows
             for row in csvdata:
 
                 # Compute polygon list
-                poly_list = compose_tiles( float( row['x_min'] ), float( row['y_min'] ), float( row['x_max'] ), float( row['y_max'] ), cfg['tiling']['split'] )
+                poly_list = compose_tiles( float(row['x_min']), float(row['y_min']), float(row['x_max']), float(row['y_max']), cfg['tiling']['split'])
 
                 # Parsing polygon list
                 for poly in poly_list:
@@ -262,14 +239,14 @@ if __name__ == "__main__":
                     poly_bbox = poly.bounds
 
                     # Compose tile synthetic coordinates
-                    syn_x = int( poly_bbox[0] )
-                    syn_y = int( poly_bbox[1] )
+                    syn_x = int(poly_bbox[0])
+                    syn_y = int(poly_bbox[1])
 
                     # Add tile geometry
                     geo_tiling.loc[index,'geometry'] = poly
 
                     # Add tile required columns
-                    geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
+                    geo_tiling.loc[index,'id'] = f"({syn_x}, {syn_y}, 0)"
                     geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
 
                     # Update index
@@ -285,7 +262,7 @@ if __name__ == "__main__":
     elif 'shapefile' in cfg['tiling']:
 
         # Import tiles definition
-        geo_tiles = gpd.read_file( cfg['tiling']['shapefile'] )
+        geo_tiles = gpd.read_file(cfg['tiling']['shapefile'])
 
         # Remove all columns #
         #geo_tiles = geo_tiles.loc[:, ['geometry']]
@@ -303,7 +280,7 @@ if __name__ == "__main__":
             poly_bbox = tile['geometry'].bounds
 
             # Compute polygon list
-            poly_list = compose_tiles( poly_bbox[0], poly_bbox[1], poly_bbox[2], poly_bbox[3], cfg['tiling']['split'] )
+            poly_list = compose_tiles(poly_bbox[0], poly_bbox[1], poly_bbox[2], poly_bbox[3], cfg['tiling']['split'])
 
             # Parsing polygon list
             for poly in poly_list:
@@ -312,21 +289,21 @@ if __name__ == "__main__":
                 poly_bbox = poly.bounds
 
                 # Compose tile synthetic coordinates
-                syn_x = int( poly_bbox[0] )
-                syn_y = int( poly_bbox[1] )
+                syn_x = int(poly_bbox[0])
+                syn_y = int(poly_bbox[1])
 
                 # Add tile geometry
                 geo_tiling.loc[index,'geometry'] = poly
 
                 # Add tile required columns
-                geo_tiling.loc[index,'id'   ] = f"({syn_x}, {syn_y}, 0)"
+                geo_tiling.loc[index,'id'] = f"({syn_x}, {syn_y}, 0)"
                 geo_tiling.loc[index,'title'] = f"XYZ tile ({syn_x}, {syn_y}, 0)"
 
                 # Update index
                 index = index + 1
 
         # force crs for csv-defined tiles
-        geo_tiling = geo_tiling.set_crs( crs = cfg['srs'] )
+        geo_tiling = geo_tiling.set_crs(crs = cfg['srs'])
 
         # Logging info
         logger.info(f"Read from \"{cfg['tiling']['shapefile']}\" :")
@@ -340,7 +317,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # set geographical frame of tiling geometry
-    geo_tiling = geo_tiling.to_crs( crs = cfg['srs'] )
+    geo_tiling = geo_tiling.to_crs(crs = cfg['srs'])
 
     # Logging info
     logger.info(f"SRS {cfg['srs']} forced for tile(s)")
@@ -362,7 +339,7 @@ if __name__ == "__main__":
         # consider labelled tiles, shrinking the labels a bit allows to avoid
         # keeping tiles that are only "touched" by a label but without a proper and
         # relevant intersection.
-        geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale( xfact=float( cfg['label']['redfact'] ), yfact=float( cfg['label']['redfact'] ), origin='centroid' )
+        geo_label_shrink['geometry'] = geo_label_shrink['geometry'].scale(xfact=float( cfg['label']['redfact']), yfact=float(cfg['label']['redfact']), origin='centroid' )
 
         # Spatial join based on label to eliminate empty tiles (keeping only tiles with at least one clear label)
         geo_tiling = gpd.sjoin(geo_tiling, geo_label_shrink, how="inner")
@@ -378,7 +355,7 @@ if __name__ == "__main__":
         geo_label = geo_label.loc[:, ['geometry']]
 
         # Export labels into geojson, forcing epsg:4326 standard
-        geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'labels.geojson'),driver='GeoJSON')
+        geo_label.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'], 'labels.geojson'), driver='GeoJSON')
 
         # logging info    
         logger.info(f"Written files in output directory :")
@@ -388,7 +365,7 @@ if __name__ == "__main__":
     geo_tiling = geo_tiling.loc[:, ['geometry', 'id', 'title']]
 
     # Export tiles into geojson, forcing epsg:4326 standard
-    geo_tiling.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'],'tiles.geojson'),driver='GeoJSON')
+    geo_tiling.to_crs(epsg='4326').to_file(os.path.join(cfg['output_folder'], 'tiles.geojson'), driver='GeoJSON')
 
     # logging info    
     logger.info(f"Written files in output directory :")
