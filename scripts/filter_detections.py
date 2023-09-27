@@ -16,8 +16,8 @@ import rasterio
 from sklearn.cluster import KMeans
 
 sys.path.insert(0, '.')
-from helpers import misc
-from helpers.constants import DONE_MSG
+from functions import misc
+from functions.constants import DONE_MSG
 
 from loguru import logger
 logger = misc.format_logger(logger)
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # Load input parameters
     YEAR = cfg['year']
     INPUT = cfg['input']
-    LABELS_SHPFILE = cfg['labels_shapefile']
+    # LABELS_SHPFILE = cfg['labels_shapefile']
     SCORE = cfg['score']
     AREA = cfg['area']
     DISTANCE = cfg['distance']
@@ -59,7 +59,6 @@ if __name__ == "__main__":
     total = len(input)
     logger.info(f"{total} input shapes")
 
-    exit()
 
     # # Discard polygons detected above the threshold elevalation and 0 m 
     # r = rasterio.open(DEM)
@@ -110,12 +109,12 @@ if __name__ == "__main__":
     geo_merge = geo_merge.buffer(-DISTANCE, resolution=2)
 
     td = len(geo_merge)
-    logger.info(f"{td} clustered detections remains after shape union (distance {DISTANCE})")
+    logger.info(f"{td} clustered detections remains after shape union (distance {DISTANCE} m)")
 
     # Discard polygons with area under the threshold 
     geo_merge = geo_merge[geo_merge.area > AREA]
     ta = len(geo_merge)
-    logger.info(f"{td - ta} detections were removed to after union (distance {AREA})")
+    logger.info(f"{td - ta} detections were removed after union (area {AREA} m2)")
 
     # Preparation of a geo df 
     data = {'id': geo_merge.index,'area': geo_merge.area, 'centroid_x': geo_merge.centroid.x, 'centroid_y': geo_merge.centroid.y, 'geometry': geo_merge}
