@@ -57,14 +57,14 @@ make_detections.py:
     trn: COCO_trn.json
     val: COCO_val.json
     tst: COCO_tst.json
-    detectron2_config_file: '../../../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
-    model_weights:
-      pth_file: './logs/model_0000999.pth'
-    image_metadata_json: './output/output_trne/GE-TP_NE-TP/z20/img_metadata.json'
-    rdp_simplification: # rdp = Ramer-Douglas-Peucker
-      enabled: false
-      epsilon: 0.5 # cf. https://rdp.readthedocs.io/en/latest/
-    score_lower_threshold: 0.05
+  detectron2_config_file: '../../../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
+  model_weights:
+    pth_file: './logs/model_final.pth'
+  image_metadata_json: './output/output_trne/GE-TP_NE-TP/z20/img_metadata.json'
+  rdp_simplification: # rdp = Ramer-Douglas-Peucker
+    enabled: false
+    epsilon: 0.5 # cf. https://rdp.readthedocs.io/en/latest/
+  score_lower_threshold: 0.05
 
 # 5-Evaluate the quality of the prediction for the different datasets with metrics calculation  
 assess_detections.py:
