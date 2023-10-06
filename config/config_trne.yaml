@@ -2,7 +2,7 @@
 prepare_data.py:  
   srs: "EPSG:2056"
   datasets:
-    labels_shapefile: ./input/Combined_GT/GE-TP_NE-TP.shp
+    labels_shapefile: ./input/GE_NE/ground_truth/GE-TP_NE-TP_v2.shp
   output_folder: ./output/output_trne/GE-TP_NE-TP/z20
   zoom_level: 20 
 
@@ -59,7 +59,7 @@ make_detections.py:
     tst: COCO_tst.json
   detectron2_config_file: '../../../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
   model_weights:
-    pth_file: './logs/model_final.pth'
+    pth_file: './logs/model_0013999.pth'
   image_metadata_json: './output/output_trne/GE-TP_NE-TP/z20/img_metadata.json'
   rdp_simplification: # rdp = Ramer-Douglas-Peucker
     enabled: false
