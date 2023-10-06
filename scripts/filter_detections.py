@@ -41,8 +41,7 @@ if __name__ == "__main__":
 
     # Load input parameters
     YEAR = cfg['year']
-    INPUT = cfg['input']
-    # LABELS_SHPFILE = cfg['labels_shapefile']
+    DETECTIONS = cfg['detections']
     SCORE = cfg['score']
     AREA = cfg['area']
     DISTANCE = cfg['distance']
@@ -50,95 +49,48 @@ if __name__ == "__main__":
 
     written_files = [] 
 
-    # # Convert input detection to a geo dataframe 
-    # aoi = gpd.read_file(LABELS_SHPFILE)
-    # aoi = aoi.to_crs(epsg=2056)
-    
-    input = gpd.read_file(INPUT)
-    input = input.to_crs(2056)
-    total = len(input)
+    # Read detections file
+    detections = gpd.read_file(DETECTIONS)
+    detections = detections.to_crs(2056)
+    total = len(detections)
     logger.info(f"{total} input shapes")
 
+    # Merge close features
+    detections_merge = gpd.GeoDataFrame()
+    detections_merge = detections.buffer(0.2, resolution=2).geometry.unary_union
+    detections_merge = gpd.GeoDataFrame(geometry=[detections_merge], crs=detections.crs)  
+    detections_merge = detections_merge.explode(index_parts=True).reset_index(drop=True)   
+    detections_merge.geometry = detections_merge.geometry.buffer(-0.2, resolution=2)  
+    detections_merge['index_merge'] = detections_merge.index
+    detections_join = gpd.sjoin(detections_merge, detections, how='inner', predicate='intersects')
+    detections_merge = detections_join.dissolve(by='index_merge', aggfunc='max')
 
-    # # Discard polygons detected above the threshold elevalation and 0 m 
-    # r = rasterio.open(DEM)
-    # row, col = r.index(input.centroid.x, input.centroid.y)
-    # values = r.read(1)[row, col]
-    # input['elev'] = values   
-    # input = input[input.elev < ELEVATION]
-    # row, col = r.index(input.centroid.x, input.centroid.y)
-    # values = r.read(1)[row, col]
-    # input['elev'] = values  
-
-    # input = input[input.elev != 0]
-    # te = len(input)
-    # logger.info(f"{total - te} detections were removed by elevation threshold: {ELEVATION} m")
-
-    # # Centroid of every detection polygon
-    # centroids = gpd.GeoDataFrame()
-    # centroids.geometry = input.representative_point()
-
-    # # KMeans Unsupervised Learning
-    # centroids = pd.DataFrame({'x': centroids.geometry.x, 'y': centroids.geometry.y})
-    # k = int((len(input)/3) + 1)
-    # cluster = KMeans(n_clusters=k, algorithm='auto', random_state=1)
-    # model = cluster.fit(centroids)
-    # labels = model.predict(centroids)
-    # logger.info(f"KMeans algorithm computed with k = {k}")
-
-    # # Dissolve and aggregate (keep the max value of aggregate attributes)
-    # input['cluster'] = labels
-
-    # input = input.dissolve(by='cluster', aggfunc='max')
-    # total = len(input)
+    td = len(detections_merge)
+    logger.info(f"{td} clustered detections remains after shape union (distance threshold = {DISTANCE} m)")
 
     # Filter dataframe by score value
-    input = input[input['score'] > SCORE]
-    sc = len(input)
-    logger.info(f"{total - sc} detections were removed by score threshold: {SCORE}")
-
-    ## Clip detection to AoI
-    # input = gpd.clip(input, aoi)
-
-    # Merge close labels using buffer and unions
-    geo_merge = gpd.GeoDataFrame()
-    geo_merge = input.buffer(+DISTANCE, resolution=2)
-    geo_merge = geo_merge.geometry.unary_union
-    geo_merge = gpd.GeoDataFrame(geometry=[geo_merge], crs=input.crs)  
-    geo_merge = geo_merge.explode(index_parts=True).reset_index(drop=True)
-    geo_merge = geo_merge.buffer(-DISTANCE, resolution=2)
-
-    td = len(geo_merge)
-    logger.info(f"{td} clustered detections remains after shape union (distance {DISTANCE} m)")
+    detections_score = detections_merge[detections_merge.score > SCORE]
+    sc = len(detections_score)
+    logger.info(f"{td - sc} detections were removed by score filtering (score threshold = {SCORE})")
 
     # Discard polygons with area under the threshold 
-    geo_merge = geo_merge[geo_merge.area > AREA]
-    ta = len(geo_merge)
-    logger.info(f"{td - ta} detections were removed after union (area {AREA} m2)")
+    detections_area = detections_score[detections_score.area > AREA]
+    ta = len(detections_area)
+    logger.info(f"{sc - ta} detections were removed by area filtering (area threshold = {AREA} m2)")
 
-    # Preparation of a geo df 
-    data = {'id': geo_merge.index,'area': geo_merge.area, 'centroid_x': geo_merge.centroid.x, 'centroid_y': geo_merge.centroid.y, 'geometry': geo_merge}
-    geo_tmp = gpd.GeoDataFrame(data, crs=input.crs)
-
-    # Get the averaged detection score of the merged polygons  
-    intersection = gpd.sjoin(geo_tmp, input, how='inner')
-    intersection['id'] = intersection.index
-    score_final = intersection.groupby(['id']).mean(numeric_only=True)
-
-    # Formatting the final geo df 
-    data = {'id_feature': geo_merge.index,'score': score_final['score'] , 'area': geo_merge.area, 'centroid_x': geo_merge.centroid.x, 'centroid_y': geo_merge.centroid.y, 'geometry': geo_merge}
-    geo_final = gpd.GeoDataFrame(data, crs=input.crs)
-    logger.info(f"{len(geo_final)} detections remaining after filtering")
+    # Final gdf
+    detection_filtered = detections_area.drop(['index_right', 'crs', 'dataset'], axis=1)
+    logger.info(f"{len(detection_filtered)} detections remaining after filtering")
 
     # Formatting the output name of the filtered detection  
-    feature = OUTPUT.replace('{score}', str(SCORE)).replace('0.', '0dot') \
-        .replace('{year}', str(int(YEAR)))\
-        .replace('{area}', str(int(AREA)))\
-        .replace('{distance}', str(int(DISTANCE)))
-    geo_final.to_file(feature, driver='GeoJSON')
+    feature_path = OUTPUT.replace('{score}', str(SCORE)).replace('0.', '0dot') \
+        .replace('{year}', str(int(YEAR))) \
+        .replace('{area}', str(int(AREA))) \
+        .replace('{distance}', str(DISTANCE)).replace('0.', '0dot')
+    detection_filtered.to_file(feature_path)
 
-    written_files.append(feature)
-    logger.success(f"{DONE_MSG} A file was written: {feature}")  
+    written_files.append(feature_path)
+    logger.success(f"{DONE_MSG} A file was written: {feature_path}")  
 
     logger.info("The following files were written. Let's check them out!")
     for written_file in written_files:
