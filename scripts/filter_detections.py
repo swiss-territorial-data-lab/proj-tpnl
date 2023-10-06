@@ -30,7 +30,7 @@ if __name__ == "__main__":
     logger.info('Starting...')
 
     # Argument and parameter specification
-    parser = argparse.ArgumentParser(description="The script filters the detection of potential Mineral Extraction Sites obtained with the object-detector scripts")
+    parser = argparse.ArgumentParser(description="The script filters detection obtained with the object-detector")
     parser.add_argument('config_file', type=str, help='input geojson path')
     args = parser.parse_args()
 
