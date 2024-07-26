@@ -33,7 +33,7 @@ The scripts have been run on a 32 GiB RAM machine with 16 GiB GPU (NVIDIA Tesla 
 Install GDAL:
 
 ```
-sudo apt-get install -y python3-gdal gdal-bin libgdal-dev gcc g++ python3.8-dev
+$ sudo apt-get install -y python3-gdal gdal-bin libgdal-dev gcc g++ python3.8-dev
 ```
 
 Python dependencies can be installed with `pip` or `conda` using the `requirements.txt` file (compiled from `requirements.in`) provided. We advise using a [Python virtual environment](https://docs.python.org/3/library/venv.html).
