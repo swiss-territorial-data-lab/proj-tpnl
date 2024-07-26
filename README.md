@@ -93,8 +93,7 @@ The general folders/files structure of the project `proj-tpnl` is organized as f
 │   │   └── wmts-geoquery                                      
 │   └── prepare_data_customed_tiles.py            
 ├── scripts
-│   ├── batch_process.sh                            # batch script automatising the detection workflow
-│   ├── filter_detections.py                        # script filtering the detections according to threshold values
+│   ├── post-processing.py                          # script post-processing the detections
 │   ├── prepare_data.py                             # script preparing data to be processed by the object-detector scripts
 │   └── results_review.py                           # script assessing the results 
 ├── .gitignore                                      
@@ -149,7 +148,7 @@ $ stdl-objdet assess_detections config/config_trne.yaml
 $ python scripts/prepare_data.py config/config_det.yaml
 $ stdl-objdet generate_tilesets config/config_det.yaml
 $ stdl-objdet make_detections config/config_det.yaml
-$ python scripts/filter_detections.py config/config_det.yaml
+$ python scripts/post_processing.py config/config_det.yaml
 ```
 
 Don't forget to assign the desired year to the url in `config_det.yaml` when you download tiles from the server with `generate_tilesets.py`.

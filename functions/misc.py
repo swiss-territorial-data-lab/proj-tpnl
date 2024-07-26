@@ -1,15 +1,4 @@
-#!/bin/python
-# -*- coding: utf-8 -*-
-
-# import warnings
-# warnings.simplefilter(action='ignore', category=FutureWarning)
-
-# import os
 import sys
-# import geopandas as gpd
-
-# from shapely.affinity import scale
-# from rasterio.transform import from_bounds
 
 
 def format_logger(logger):
