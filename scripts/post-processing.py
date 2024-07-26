@@ -1,19 +1,10 @@
-#!/bin/python
-# -*- coding: utf-8 -*-
-
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
+import argparse
 import os
 import sys
 import time
-import argparse
 import yaml
 
 import geopandas as gpd
-import pandas as pd
-import rasterio
-from sklearn.cluster import KMeans
 
 sys.path.insert(0, '.')
 from functions import misc

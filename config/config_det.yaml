@@ -8,16 +8,16 @@ prepare_data.py:
 
 # 2-Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
-  debug_mode: False
+  debug_mode:
+    enable: True  # sample of tiles
+    nb_tiles_max: 100
+  working_directory: output
   datasets:
-    aoi_tiles_geojson: ./output/output_det/GE-TP_NE-TP/z20/tiles.geojson
+    aoi_tiles_geojson: output_det/GE-TP_NE-TP/z20/tiles.geojson
     orthophotos_web_service:
       type: XYZ # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ
-      url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/2020/3857/{z}/{x}/{y}.jpeg
-      # url: https://wms.geo.admin.ch/service
-      # layers: ch.swisstopo.swissimage
-      # srs: "EPSG:2056"
-  output_folder: ./output/output_det/GE-TP_NE-TP/z20
+      url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/current/3857/{z}/{x}/{y}.jpeg
+  output_folder: output_det/GE-TP_NE-TP/z20
   tile_size: 256 # per side, in pixels
   overwrite: False
   n_jobs: 10
@@ -30,49 +30,35 @@ generate_tilesets.py:
     license:
       name: Unknown
       url:
-    category:
-      name: "Thermal Panel"
-      supercategory: "Infrastructure"
 
 # 3-Perform the object detection based on the optimized trained model
 make_detections.py:
-  working_folder: ./output/output_det/GE-TP_NE-TP/z20
+  working_directory: ./output/output_det/GE-TP_NE-TP/z20/2023
   log_subfolder: logs
   sample_tagged_img_subfolder: sample_tagged_images
   COCO_files: # relative paths, w/ respect to the working_folder
     oth: COCO_oth.json
-  detectron2_config_file: '../../../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
+  detectron2_config_file: '../../../../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
   model_weights:
-    pth_file: '../../../output_trne/GE-TP_NE-TP/z20/logs/model_0013999.pth'
-  image_metadata_json: './output/output_det/GE-TP_NE-TP/z20/img_metadata.json'
+    pth_file: '../../../../output_trne/GE-TP_NE-TP/z20/replicate3/logs/model_0013999.pth'
+  image_metadata_json: 'img_metadata.json'
   rdp_simplification: # rdp = Ramer-Douglas-Peucker
-    enabled: false
+    enabled: False
     epsilon: 0.5 # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
 
 # 4-... 
 filter_detections.py:
-  year: 2020
-  detections: ./output/output_det/GE-TP_NE-TP/z20/replicate3/oth_detections_at_0dot05_threshold.gpkg
+  year: 2023
+  detections: ./output/output_det/GE-TP_NE-TP/z20/2020/oth_detections_at_0dot05_threshold.gpkg
   # labels_shapefile: ./data/AoI/AoI_2020.shp
   score: 0.90 # detection score (from 0 to 1) provided by detectron2
   distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   area: 1.0 # m2, area threshold under which polygons are discarded
-  output: ./output/output_det/GE-TP_NE-TP/z20/replicate3/oth_detections_at_0dot05_threshold_year-{year}_score-{score}_area-{area}_distance-{distance}.gpkg
+  output: ./output/output_det/GE-TP_NE-TP/z20/2023/oth_detections_at_0dot05_threshold_year-{year}_score-{score}_area-{area}_distance-{distance}.gpkg
   # output: ./output/output_det/GE-TP_NE-TP/z20/replicate3/oth_detections_at_0dot05_threshold_year-{year}.geojson
 
 
 results_review.py:
   file: ./input/VD/ground_truth/st_subventions_ZOI.shp
-  output: ./output/output_det/GE-TP_NE-TP/z20/replicate3/plots/
-
-# prepare_data.py:
-#   srs: "EPSG:2056"
-#   tiling:
-#     csv: ../input/[TILES_CSV_FILE]
-#     # shapefile: ../input/[TILES_SHP_FILE]
-#     split: 1
-#   label:
-#     shapefile: [LABELS_SHP_FILE]
-#     redfact: 0.9
-#   output_folder: ../output
+  output: ./output/output_det/GE-TP_NE-TP/z20/2020/plots/

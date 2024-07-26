@@ -100,5 +100,3 @@ if __name__ == "__main__":
 
     # Export tiles definitions
     geo_tiling.to_file( os.path.join( args.output, f'tiles_{args.size}_{shift_x}_{shift_y}.shp'))
-
-

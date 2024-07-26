@@ -39,7 +39,6 @@ from osgeo import gdal
 from osgeo import osr
 
 
-
 def read_xml_thing( xml ):
 
     """
@@ -154,7 +153,6 @@ def read_xml_thing( xml ):
     return xmlpath, xmldata
 
 
-
 def detect_layer( xmlpath, xmldata, identifier ):
 
     """
@@ -223,7 +221,6 @@ def detect_layer( xmlpath, xmldata, identifier ):
 
     # Layer not found
     return None
-
 
 
 def detect_tile_matrix( xmlpath, xmldata, identifier ):
@@ -324,14 +321,14 @@ def detect_tile_matrix( xmlpath, xmldata, identifier ):
         if xmlpath[index] == '/Capabilities/Contents/TileMatrixSet/TileMatrix':
 
             # Push scale information on array
-            array_scale.append( scale_id         )
-            array_denum.append( scale_denom      )
-            array_org_x.append( scale_origin_x   )
-            array_org_y.append( scale_origin_y   )
-            array_pix_x.append( scale_pixel_x    )
-            array_pix_y.append( scale_pixel_y    )
-            array_mat_x.append( scale_mat_width  )
-            array_mat_y.append( scale_mat_height )
+            array_scale.append(scale_id)
+            array_denum.append(scale_denom)
+            array_org_x.append(scale_origin_x)
+            array_org_y.append(scale_origin_y)
+            array_pix_x.append(scale_pixel_x)
+            array_pix_y.append(scale_pixel_y)
+            array_mat_x.append(scale_mat_width)
+            array_mat_y.append(scale_mat_height)
 
         # Detect and push
         if xmlpath[index] == '/Capabilities/Contents/TileMatrixSet/ows:Identifier':
@@ -358,7 +355,6 @@ def detect_tile_matrix( xmlpath, xmldata, identifier ):
 
     # Tilematrixset not detected
     return None, None, None, None, None, None, None, None
-
 
 
 def get_tile_by_bounding_box( param_url, param_bbox, param_size, param_output, param_tmp ):
@@ -688,6 +684,4 @@ if __name__ == "__main__":
         get_tile_by_bounding_box( query_url, tile_bbox, tile_size, tile_export, args.tmp )
 
     # Send exit code
-    sys.exit( 0 )
-
-
+    sys.exit(0)

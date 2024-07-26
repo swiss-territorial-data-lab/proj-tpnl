@@ -1,19 +1,10 @@
-#!/bin/python
-# -*- coding: utf-8 -*-
-
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
+import argparse
 import os
 import sys
 import time
-import argparse
 import yaml
 
 import geopandas as gpd
-import pandas as pd
-import rasterio
-from sklearn.cluster import KMeans
 
 sys.path.insert(0, '.')
 from functions import misc
@@ -47,17 +38,13 @@ if __name__ == "__main__":
 
     # Read detections file
     data = gpd.read_file(FILE)
-    print(data)
 
     data_gt = data[data['TP_2020'] == 'yes'] 
-    nb_gt = len(data_gt)
     data_det = data[data['detection'] == 'yes'] 
-    nb_det = len(data_det)
 
-    logger.info(f"Number of GT = {nb_gt}")
-    logger.info(f"Number of detection = {nb_det}")
-    logger.info("Sucess of detection = " + "{:.0%}".format(nb_det / nb_gt))
-
+    logger.info(f"Number of GT = {len(data_gt)}")
+    logger.info(f"Number of detection = {len(data_det)}")
+    logger.info("Sucess of detection = " + "{:.0%}".format(len(data_det) / len(data_gt)))
 
     logger.info("The following files were written. Let's check them out!")
     for written_file in written_files:
