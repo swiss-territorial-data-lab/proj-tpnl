@@ -1,6 +1,6 @@
 # Automatic detection of thermal pannels
 
-The project aims to perform automatic detection of thermal panels on georeferenced raster images of Switzerland with a deep learning approach. Detailed documentation of the project and results can be found on the [STDL technical website](https://tech.stdl.ch/PROJ-TPNL/). <br>
+The project aims to perform automatic detection of thermal panels on georeferenced raster images of Switzerland with a deep learning approach. Detailed documentation of the project and results can be found on the [STDL technical website](https://tech.stdl.ch/PROJ-TPNL/). It was written for results obtained with `v0.0.0` of the repository. <br>
 
 **TOC**
 - [Requirements](#requirements)
@@ -14,7 +14,7 @@ The project aims to perform automatic detection of thermal panels on georeferenc
     - [Workflow instructions](#workflow-instructions)
 
 ## Requirements
-
+Scheme_tpnl.png
 ### Hardware
 
 The scripts have been run on a 32 GiB RAM machine with 16 GiB GPU (NVIDIA Tesla T4) compatible with [CUDA](https://detectron2.readthedocs.io/en/latest/tutorials/install.html). 
@@ -26,10 +26,7 @@ The scripts have been run on a 32 GiB RAM machine with 16 GiB GPU (NVIDIA Tesla 
 - PyTorch version 1.10
 - CUDA version 11.3
 - GDAL version 3.0.4
-- object-detector .
-- pandas 1.5.3
-- geopandas 0.8.0
-- Shapely 1.7.1
+- object-detector 2.1.0
 
 ### Installation
 
@@ -60,11 +57,17 @@ $ pip-compile requirements.in
 
 ## Getting started
 
+<p align="center">
+<img src="./images/tpnl_det_workflow.png?raw=true" width="100%">
+<br />
+<i>Workflow scheme.</i>
+</p>
+
 ### Files structure
 
 The `proj-tpnl` repository (https://github.com/swiss-territorial-data-lab/proj-tpnl) contains scripts to prepare and post-process the datasets and results:
 
-In addition, object detection is performed by tools developed in `object-detector` git repository. A description of the scripts used is presented [here](https://github.com/swiss-territorial-data-lab/object-detector)
+In addition, object detection is performed bwith the scripts developed in the `object-detector` git repository. A description of the scripts used is presented [here](https://github.com/swiss-territorial-data-lab/object-detector)
 
 The general folders/files structure of the project `proj-tpnl` is organized as follows. 
 
@@ -142,7 +145,7 @@ $ stdl-objdet make_detections config/config_trne.yaml
 $ stdl-objdet assess_detections config/config_trne.yaml
 ```
 
-**Detection**: 
+**Inference**: 
 
 ```bash
 $ python scripts/prepare_data.py config/config_det.yaml
@@ -152,8 +155,6 @@ $ python scripts/post_processing.py config/config_det.yaml
 ```
 
 Don't forget to assign the desired year to the url in `config_det.yaml` when you download tiles from the server with `generate_tilesets.py`.
-
-url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/[YEAR]/3857/{z}/{x}/{y}.jpeg
 
 
 Optional:
