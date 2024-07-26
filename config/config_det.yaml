@@ -1,23 +1,21 @@
-# 1-Produce labels and tiles geometry according to the AOI extent and zoom level
 prepare_data.py:  
   srs: "EPSG:2056"
   datasets:
-    labels_shapefile: ./input/input_det/<SHP_FILE>
+    shapefile: ./input/input_det/<SHP_FILE>
   output_folder: ./output/output_det/
   zoom_level: 20 
 
-# 2-Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
   debug_mode:
     enable: True  # sample of tiles
     nb_tiles_max: 100
   working_directory: output
   datasets:
-    aoi_tiles_geojson: output_det/tiles.geojson
-    orthophotos_web_service:
+    aoi_tiles: ./output/output_det/tiles.geojson
+    image_source:
       type: XYZ # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ
-      url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/<YEAR>/3857/{z}/{x}/{y}.jpeg
-  output_folder: output_det/
+      location: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/current/3857/{z}/{x}/{y}.jpeg
+  output_folder: ./output/output_det/
   tile_size: 256 # per side, in pixels
   overwrite: False
   n_jobs: 10
@@ -31,24 +29,22 @@ generate_tilesets.py:
       name: Unknown
       url:
 
-# 3-Perform the object detection based on the optimized trained model
 make_detections.py:
   working_directory: ./output/output_det/
   log_subfolder: logs
   sample_tagged_img_subfolder: sample_tagged_images
-  COCO_files: # relative paths, w/ respect to the working_folder
+  COCO_files: # relative paths, w/ respect to the working_directory
     oth: COCO_oth.json
-  detectron2_config_file: '../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
+  detectron2_config_file: '../../config/detectron2_config_tpnl.yaml' # path relative to the working_directory
   model_weights:
-    pth_file: '../../output_trne/logs/model_<*>.pth'
+    pth_file: '../output_trne/logs/model_<*>.pth'
   image_metadata_json: 'img_metadata.json'
   rdp_simplification: # rdp = Ramer-Douglas-Peucker
     enabled: False
     epsilon: 0.5 # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
 
-# 4-Process the results to merge adjacent polygons, filter score, area and object outside a roof
-post_processing.py:
+post-processing.py:
   year: 2023
   detections: ./output/output_det/oth_detections_at_0dot05_threshold.gpkg
   score: 0.90 # detection score (from 0 to 1) provided by detectron2

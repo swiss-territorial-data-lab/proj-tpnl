@@ -1,21 +1,22 @@
-# 1-Produce labels and tiles geometry according to the AOI extent and zoom level
 prepare_data.py:  
   srs: "EPSG:2056"
   datasets:
-    labels_shapefile: ./input/input_trne/<SHP_FILE>
+    shapefile: ./input/input_trne/<SHP_FILE>
   output_folder: ./output/output_trne/
   zoom_level: 20 
 
-# 2-Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
-  debug_mode: False
+  debug_mode: 
+    enable: False  # sample of tiles
+    nb_tiles_max: 50
+  working_directory: output
   datasets:
-    aoi_tiles_geojson: ./output/output_trne/tiles.geojson
-    ground_truth_labels_geojson: ./output/output_trne/labels.geojson
-    orthophotos_web_service:
+    aoi_tiles: ./output_trne/tiles.geojson
+    ground_truth_labels: ./output_trne/labels.geojson
+    image_source:
       type: XYZ # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ
-      url: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/<YEAR>/3857/{z}/{x}/{y}.jpeg
-  output_folder: ./output/output_trne/
+      location: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/<YEAR>/3857/{z}/{x}/{y}.jpeg
+  output_folder: ./output_trne/
   tile_size: 256 # per side, in pixels
   overwrite: False
   n_jobs: 10
@@ -28,16 +29,12 @@ generate_tilesets.py:
     license:
       name: Unknown
       url:
-    category:
-        name: "Thermal Panel"
-        supercategory: "Infrastructure"
 
-# 3-Train the model with the detectron2 algorithm
 train_model.py:
-    working_folder: ./output/output_trne/
+    working_directory: ./output/output_trne/
     log_subfolder: logs
     sample_tagged_img_subfolder: sample_tagged_images
-    COCO_files: # relative paths, w/ respect to the working_folder
+    COCO_files: # relative paths, w/ respect to the working_directory
       trn: COCO_trn.json
       val: COCO_val.json
       tst: COCO_tst.json
@@ -45,32 +42,31 @@ train_model.py:
     model_weights:
       model_zoo_checkpoint_url: "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml"
 
-# 4-Perform the object detection based on the optimized trained model
 make_detections.py:
-  working_folder: ./output/output_trne/
+  working_directory: ./output/output_trne/
   log_subfolder: logs
   sample_tagged_img_subfolder: sample_tagged_images
-  COCO_files: # relative paths, w/ respect to the working_folder
+  COCO_files: # relative paths, w/ respect to the working_directory
     trn: COCO_trn.json
     val: COCO_val.json
     tst: COCO_tst.json
   detectron2_config_file: '../../config/detectron2_config_tpnl.yaml' # path relative to the working_folder
   model_weights:
     pth_file: './logs/model_<*>.pth'
-  image_metadata_json: './output/output_trne/img_metadata.json'
+  image_metadata_json: 'img_metadata.json'
   rdp_simplification: # rdp = Ramer-Douglas-Peucker
     enabled: false
     epsilon: 0.5 # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
 
-# 5-Evaluate the quality of the prediction for the different datasets with metrics calculation  
 assess_detections.py:
+  working_directory: ./output/output_trne
   datasets:
-    ground_truth_labels_geojson: ./output/output_trne/labels.geojson
-    image_metadata_json: ./output/output_trne/img_metadata.json
-    split_aoi_tiles_geojson: ./output/output_trne/split_aoi_tiles.geojson # aoi = Area of Interest
+    ground_truth_labels: ./labels.geojson
+    image_metadata: ./img_metadata.json
+    split_aoi_tiles: ./split_aoi_tiles.geojson # aoi = Area of Interest
     detections:
-      trn: ./output/output_trne/trn_detections_at_0dot05_threshold.gpkg
-      val: ./output/output_trne/val_detections_at_0dot05_threshold.gpkg
-      tst: ./output/output_trne/tst_detections_at_0dot05_threshold.gpkg
-  output_folder: ./output/output_trne/
+      trn: ./trn_detections_at_0dot05_threshold.gpkg
+      val: ./val_detections_at_0dot05_threshold.gpkg
+      tst: ./tst_detections_at_0dot05_threshold.gpkg
+  output_folder: .
