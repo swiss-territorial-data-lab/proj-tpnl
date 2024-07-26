@@ -1,4 +1,4 @@
-# Automatic detection of thermal pannels
+# Automatic detection of thermal panels
 
 The project aims to perform automatic detection of thermal panels on georeferenced raster images of Switzerland with a deep learning approach. Detailed documentation of the project and results can be found on the [STDL technical website](https://tech.stdl.ch/PROJ-TPNL/). It was written for results obtained with `v0.0.0` of the repository. <br>
 
