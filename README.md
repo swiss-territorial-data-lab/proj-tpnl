@@ -86,7 +86,7 @@ The general folders/files structure of the project `proj-tpnl` is organized as f
 ├── output                                          # output folders
 │   ├── output_det                                  # output detections
 │   └── output_trne                                 # training and evaluation outputs  
-├── sandbox                                         # folder containing scripts in developments. Their execcution is not guarentee. README are present in each sub-folders
+├── sandbox                                         # folder containing scripts in developments. Their execution is not guarentee. README are present in each sub-folders
 │   ├── post-processing  
 │   │   ├── extract-prediction 
 │   │   ├── filter-prediction 
