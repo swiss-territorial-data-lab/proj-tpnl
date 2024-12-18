@@ -54,6 +54,7 @@ if __name__ == "__main__":
 
     # Load input parameters
     WORKING_DIR = cfg['working_dir']
+    YEAR = cfg['year'] 
     DETECTIONS = cfg['detections']
     BUILDINGS = cfg['buildings'] if 'buildings' in cfg.keys() else None
     SCORE_THD = cfg['score_threshold']
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     logger.info(f"{len(detections_infos_gdf)} detections remaining after filtering")
 
     # Formatting the output name of the filtered detection  
-    feature = f'{DETECTIONS[:-5]}_threshold_score-{SCORE_THD}_area-{int(AREA_THD)}_elevation-{int(ELEVATION_THD)}'.replace('0.', '0dot') + '.gpkg'
+    feature = f'{DETECTIONS[:-5]}_year-{int(YEAR)}_threshold_score-{SCORE_THD}_area-{int(AREA_THD)}'.replace('0.', '0dot') + '.gpkg'
     detections_infos_gdf.to_file(feature)
 
     written_files.append(feature)
