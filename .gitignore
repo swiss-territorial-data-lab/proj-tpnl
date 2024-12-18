@@ -2,6 +2,7 @@
 dev
 lib
 data/*
+!data/category_ids.json
 output/*
 
 # Byte-compiled / optimized / DLL files
