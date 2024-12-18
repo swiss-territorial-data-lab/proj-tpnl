@@ -51,30 +51,29 @@ make_detections.py:
     enabled: true
     epsilon: 2.0        # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
-  remove_det_overlap: True  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
+  remove_det_overlap: False  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
 
-
-post-processing.py:
-  year: 2023
-  detections: ./output/output_det/oth_detections_at_0dot05_threshold.gpkg
-  score: 0.90 # detection score (from 0 to 1) provided by detectron2
-  distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
-  area: 1.0 # m2, area threshold under which polygons are discarded
-  output: ./output/output_det/oth_detections_at_0dot05_threshold_year-{year}_score-{score}_area-{area}_distance-{distance}.gpkg
 
 # Assess the final results
 merge_detections.py:
   working_dir: ./output/det/
   detections:
     oth: oth_detections_at_0dot05_threshold.gpkg
-  distance: 10 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
+  filter_buildings:
+    enable: True
+    buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
+  distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
   score_threshold: 0.05
   assess: 
     enable: False
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
-  
 
-result_review.py:
-  file: ./input/<SHP_FILE>
-  output: ./output/output_det/
+
+# Filtering and merging detection polygons to improve final results
+filter_detections.py:
+  working_dir: ./data
+  detections: ../output/det/merged_detections_at_0dot05_threshold.gpkg
+  buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
+  score_threshold: 0.90 # detection score (from 0 to 1) provided by detectron2
+  area_threshold: 1.0 # m2, area threshold under which polygons are discarded

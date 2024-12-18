@@ -93,7 +93,7 @@ merge_detections.py:
   filter_buildings:
     enable: True
     buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
-  distance: 10 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
+  distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
   score_threshold: 0.05
   assess: 
