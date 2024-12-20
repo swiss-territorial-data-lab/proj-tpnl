@@ -1,16 +1,19 @@
-prepare_data.py:  
+# Produce tile geometries based on the AoI extent and zoom level
+prepare_data.py: 
+  srs: EPSG:2056 
   datasets:
     shapefile: ./data/ground_truth/panels_ground_truth.gpkg  # GT labels                    
     category: class
     class_selection: ['thermal panel']      # list the desired class names 1: thermal panel, 2: PV, 3: unknown
-    canton_selection: ['GE', 'VD', 'NE']    # list the desired canton names 1: AG, 2: GE, 3: VD, 4: NE
+    canton_selection: ['NE', 'VD']    # list the desired canton names 1: AG, 2: GE, 3: VD, 4: NE
   output_folder: ./output/trne/
-  zoom_level: 20
+  zoom_level: 17
 
+# Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
   debug_mode: 
-    enable: False  # sample of tiles
-    nb_tiles_max: 1000
+    enable: True  # sample of tiles
+    nb_tiles_max: 200
   working_directory: .
   datasets:
     aoi_tiles: output/trne/tiles.geojson
@@ -28,12 +31,13 @@ generate_tilesets.py:
     year: 2024
     version: 1.0
     description: Energy facilities
-    contributor: swisstopo
-    url: https://swisstopo.ch
+    contributor: NE, GE, VD
+    url: unknown
     license:
-      name: Unknown
-      url:
+      name: unknown
+      url: unknown
 
+# Train the model with the detectron2 algorithm 
 train_model.py:
   working_directory: ./output/trne/
   log_subfolder: logs
@@ -46,6 +50,7 @@ train_model.py:
   model_weights:
     model_zoo_checkpoint_url: COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_1x.yaml
 
+# Object detection with the optimised trained model
 make_detections.py:
   working_directory: ./output/trne/
   log_subfolder: logs
@@ -59,11 +64,10 @@ make_detections.py:
     pth_file: ./logs/model_0002999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
   image_metadata_json: img_metadata.json
   rdp_simplification:   # rdp = Ramer-Douglas-Peucker
-    enabled: true
+    enabled: True
     epsilon: 2.0        # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
   remove_det_overlap: False  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
-
 
 # Evaluate the detection quality for the different datasets by calculating metrics
 assess_detections.py:
@@ -81,8 +85,7 @@ assess_detections.py:
   area_threshold: 50       # area under which the polygons are discarded from assessment
   metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
 
-
-  # Assess the final results
+# Assess the final results
 merge_detections.py:
   working_dir: ./output/trne/
   labels: labels.geojson
