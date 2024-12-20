@@ -77,3 +77,8 @@ filter_detections.py:
   buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
   score_threshold: 0.90 # detection score (from 0 to 1) provided by detectron2
   area_threshold: 1.0 # m2, area threshold under which polygons are discarded
+
+merge_years.py:
+  working_directory: ./output/det/
+  years: [YEAR1, YEAR2, YEAR3]          # choose year
+  layer: oth_detections_at_0dot3_threshold_year-2020_score-0dot95_area-5000_elevation-1200_distance-10.geojson 

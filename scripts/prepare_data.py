@@ -167,6 +167,7 @@ if __name__ == "__main__":
     ## Convert datasets shapefiles into geojson format
     logger.info('Convert labels shapefile into GeoJSON format (EPSG:4326)...')
     labels_gdf = gpd.read_file(SHPFILE)
+    labels_gdf = misc.check_validity(labels_gdf, correct=True)
     if 'year' in labels_gdf.keys():
         labels_gdf['year'] = labels_gdf.year.astype(int)
         labels_4326_gdf = labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry', 'year'])
