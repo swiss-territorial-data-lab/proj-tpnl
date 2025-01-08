@@ -54,14 +54,14 @@ if __name__ == "__main__":
         cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
 
     WORKING_DIR = cfg['working_dir']
-    ROOFS_SHP = cfg['roofs_shp']
+    BUILDINGS_SHP = cfg['buildings_shp']
     IMAGE_FOLDER = cfg['image_dir']
     TRANSPARENCY = cfg['transparency']
 
     os.chdir(WORKING_DIR)
 
     logger.info('Import data...')
-    buildings_gdf = gpd.read_file(ROOFS_SHP)
+    buildings_gdf = gpd.read_file(BUILDINGS_SHP)
     tiles = glob(os.path.join(IMAGE_FOLDER, '*.tif'))
 
     if buildings_gdf.crs != 'epsg:3857':
@@ -69,12 +69,12 @@ if __name__ == "__main__":
 
     logger.info('Process vector data...')
     buildings_gdf = buildings_gdf.buffer(0)
-    merged_roofs_geoms = buildings_gdf.unary_union
+    merged_buildings_geoms = buildings_gdf.unary_union
 
     for tile in tqdm(tiles, desc='Produce masks', total=len(tiles)):
 
         if TRANSPARENCY:
-            geoms_list = [mapping(merged_roofs_geoms)]
+            geoms_list = [mapping(merged_buildings_geoms)]
 
             with rasterio.open(tile) as src:
                 mask_image, mask_transform = mask(src, geoms_list)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
             im_size = (tile_meta['height'], tile_meta['width'])
 
-            polygons = [poly_from_utm(geom, src.meta['transform']) for geom in merged_roofs_geoms.geoms]
+            polygons = [poly_from_utm(geom, src.meta['transform']) for geom in merged_buildings_geoms.geoms]
             mask_image = rasterize(shapes=polygons, out_shape=im_size)
 
             mask_meta = src.meta.copy()
