@@ -214,7 +214,9 @@ if __name__ == "__main__":
             fp_labels_4326_gdf = fp_labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry'])
         if CATEGORY:
             fp_labels_4326_gdf['CATEGORY'] = fp_labels_4326_gdf[CATEGORY]
-            fp_labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
+        else:
+            fp_labels_4326_gdf['CATEGORY'] = 'energy facility'
+        fp_labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
 
         nb_fp_labels = len(fp_labels_4326_gdf)
         logger.info(f"There are {nb_fp_labels} polygons in {FP_SHPFILE}")
