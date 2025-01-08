@@ -39,8 +39,8 @@ generate_tilesets.py:
       url: unknown
     categories_file: ./data/category_ids.json
 
-# Create an image mask keeping the buildings visible (optional)
-mask_building.py:
+# (optional) Create an image mask keeping the buildings visible
+mask_buildings.py:
   working_dir: ./data/
   image_dir: tiles/
   buildings_shp: layers/building_footprint_swissTLM3D_VD.gpkg
@@ -73,7 +73,7 @@ merge_detections.py:
     tst: tst_detections_at_0dot05_threshold.gpkg
   filter_buildings:
     enable: False
-    buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
+    buildings_shp: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
   distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
   score_threshold: 0.05
