@@ -67,21 +67,22 @@ The folders/files of the project `proj-tpnl` (in combination with the `object-de
 ├── config                                          # configurations files folder
 │   ├── config_det.yaml                             # detection workflow
 │   ├── config_trne.yaml                            # training and evaluation workflow
-│   └── detectron2_config_dqry.yaml                 # detectron 2
+│   └── detectron2_config.yaml                      # detectron 2
 ├── data                                            # folder containing the input data
 │   ├── AoI                                         # available on request
-│   ├── ground_truth                                                             
+│   ├── ground_truth                                # available on request                             
 │   ├── layers                                      # available on request 
 │   └── categories_ids.json                         # class dictionnary     
 ├── functions
-│   ├── constants.py                              
+│   ├── constants.py    
+│   ├── metrics.py                             
 │   └── misc.py                                
 ├── images                                          
 ├── models                                          # trained models
 ├── output                                          # outputs folders
 │   ├── det                            
 │   └── trne
-├── sandbox                                         # folder containing scripts in developments. Their execution is not guarentee. README are present in each sub-folders
+├── sandbox                                         # folder containing scripts in developments.
 │   ├── post-processing  
 │   │   ├── extract-prediction 
 │   │   ├── filter-prediction 
@@ -90,9 +91,8 @@ The folders/files of the project `proj-tpnl` (in combination with the `object-de
 │   │   ├── tile-generator  
 │   │   └── wmts-geoquery                                      
 │   └── prepare_data_customed_tiles.py  
-dataset 
 ├── scripts
-│   ├── filter_detections.py                        # script detections filtering 
+│   ├── mask_buildings.py                           # script applying a building footprint mask to an image 
 │   ├── merge_detections.py                         # script merging adjacent detections and attributing class
 │   └── prepare_data.py                             # script preparing data to be processed by the object-detector scripts
 ├── .gitignore                                      
@@ -108,8 +108,10 @@ dataset
 Below, the description of input data used for this project. 
 
 - images: [_SWISSIMAGE Journey_](https://map.geo.admin.ch/#/map?lang=fr&center=2660000,1190000&z=1&bgLayer=ch.swisstopo.pixelkarte-farbe&topic=ech&layers=ch.swisstopo.swissimage-product@year=2024;ch.swisstopo.swissimage-product.metadata@year=2024) is an annual dataset of aerial images of Switzerland from 1946 to today. The images are downloaded from the [geo.admin.ch](https://www.geo.admin.ch/fr) server using [XYZ](https://api3.geo.admin.ch/services/sdiservices.html#xyz) connector. 
-- ground truth: labels vectorized by domain experts. We have at our disposal ground truth from the Argau canton (FHNW), Neucĥatel canton and Geneva canton vectorized for the year 2020.
-
+- ground truth: labels vectorized by experts in the field. We have the ground truth for the Canton of Argau (FHNW), the Canton of Neucĥatel and the Canton of Geneva vectorized for the year 2020 and for the Canton of Vaud vectorized for the year 2023.
+- building footprints: provided by the [swissTLM3D](https://www.swisstopo.admin.ch/fr/modele-du-territoire-swisstlm3d).
+- category_ids.json: categories attributed to the detections.
+- models: the trained models used to produce the results presented in the documentation are available on request.
 
 ## Scripts
 
@@ -121,50 +123,69 @@ The `proj-tpnl` repository contains scripts to prepare and post-process the data
 </p>
 
 1. `prepare_data.py`: format labels and produce tiles to be processed for the object detection.
-2. `merge_detections.py`: merge adjacent detections cut by tiles into a single detection and attribute the class (the class of the maximum area).
-3. `filter_detections.py`: filter detections by overlap with building footprints and other values such as score and polygon area.
+2. `mask_buildings.py`: apply a mask to keep only buildings pixel in an image.
+3. `merge_detections.py`: merge adjacent detections cut by tiles into a single detection and attribute the class (the class of the maximum area). It also offers the possbility to filter detections by confidence score and building footprints.
 
 Object detection is performed with tools present in the [`object-detector`](https://github.com/swiss-territorial-data-lab/object-detector) git repository. 
 
 
 ## Workflow instructions
 
-The workflow can be executed by running the following list of actions and commands. Adjust the paths and input values of the configuration files accordingly. The contents of the configuration files in angle brackets must be assigned.
+The workflow can be executed by running the following list of actions and commands. Adjust the paths and input values of the configuration files accordingly. The contents of the configuration files in square brackets must be assigned. 
 
 **Training and evaluation**: 
 
+Prepare the data:
 ```
 $ python scripts/prepare_data.py config/config_trne.yaml
 $ stdl-objdet generate_tilesets config/config_trne.yaml
-$ stdl-objdet train_model config/config_trne.yaml
-$ tensorboard --logdir output/output_trne/logs
 ```
 
-Open the following link with a web browser: `http://localhost:6006` and identify the iteration minimising the validation loss and select the model accordingly (`model_*.pth`) in `config_trne`.
+A mask can be applied on the images to keep only building pixels (optional):
+```
+$ python scripts/result_analysis.py config/config_trne.yaml
+```
 
+Train the model:
+```
+$ stdl-objdet train_model config/config_trne.yaml
+$ tensorboard --logdir output/trne/logs
+```
+
+Open the following link with a web browser: `http://localhost:6006` and identify the iteration minimising the validation loss and select the model accordingly (`model_*.pth`) in `config_trne`. For the provided parameters, `model_0002999.pth` is the default one.
+
+Perform and assess detections:
 ```
 $ stdl-objdet make_detections config/config_trne.yaml
 $ stdl-objdet assess_detections config/config_trne.yaml
-$ python scripts/merge_detections config/config_trne.yaml
+```
+
+Finally, the detection obtained by tiles can be merged when adjacent and a new assessment is performed:
+```
+$ python scripts/merge_detections.py config/config_trne.yaml
 ```
 
 **Inference**: 
 
+Copy the selected trained model to the folder `models`:
+```
+$ mkdir models
+$ cp output/trne/logs/<selected_model_pth> models
+```
+
+Process images:
 ```
 $ python scripts/prepare_data.py config/config_det.yaml
 $ stdl-objdet generate_tilesets config/config_det.yaml
 $ stdl-objdet make_detections config/config_det.yaml
-$ python scripts/merge_detections.py config/config_trne.yaml
-$ python scripts/filter_detections.py config/config_trne.yaml
+$ python scripts/merge_detections.py config/config_det.yaml
 ```
 
-Don't forget to assign the desired year to the url in `config_det.yaml` when you download tiles from the server with `generate_tilesets.py`.
 
+## Sandbox
 
-Optional:
-```
-$ python scripts/result_review.py config/config_det.yaml
-```
+Additional scripts originated from previous version of the project are loacted in the sandbox folder. They permit to pre- and post-processed the data and detections. A README file is present in each sub-folders. Their execution is not guarentee. 
+
 
 ## Contributors
 
