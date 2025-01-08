@@ -76,9 +76,9 @@ if __name__ == "__main__":
 
     if FILTER_BUILDINGS:
         buildings_gdf = gpd.read_file(BUILDINGS_SHP)
-        buildings_gdf = buildings_gdf.to_crs(2056)        
+        buildings_gdf = buildings_gdf.to_crs(2056) 
         left_join = gpd.sjoin(detections_gdf, buildings_gdf, how='left', predicate='intersects', lsuffix='left', rsuffix='right')
-        detections_gdf = left_join[left_join.label_id.notnull()].copy().drop_duplicates()
+        detections_gdf = left_join[left_join.det_id.notnull()].copy().drop(columns=['index_right']).drop_duplicates()
 
     # get classe ids
     filepath = open(os.path.join('category_ids.json'))
@@ -138,7 +138,8 @@ if __name__ == "__main__":
             detections_by_year_gdf = detections_by_year_gdf[(detections_by_year_gdf['index_merge']==id)]
             detections_by_year_gdf = detections_by_year_gdf.rename(columns={'score_left': 'score'})
             det_score_all.append(detections_by_year_gdf['score'].mean())
-            detections_by_year_gdf = misc.check_validity(detections_by_year_gdf, correct=True)        
+            detections_by_year_gdf = misc.check_validity(detections_by_year_gdf, correct=True) 
+            detections_by_year_gdf = detections_by_year_gdf.select_dtypes(exclude=['datetime64[ns, UTC]'])      
             detections_by_year_gdf = detections_by_year_gdf.dissolve(by='det_class', aggfunc='sum', as_index=False)
             if len(detections_by_year_gdf) > 0:
                 detections_by_year_gdf['det_class'] = detections_by_year_gdf.loc[detections_by_year_gdf['area'] == detections_by_year_gdf['area'].max(), 
