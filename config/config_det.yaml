@@ -6,7 +6,6 @@ prepare_data.py:
   output_folder: ./output/det/
   zoom_level: 20 
 
-
 # Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
   debug_mode: 
@@ -16,8 +15,13 @@ generate_tilesets.py:
   datasets:
     aoi_tiles: ./output/det/tiles.geojson
     image_source:
+      # type: FOLDER
+      # year: multi-year                     # Optional, supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
+      # location: <IMG_FOLDER_PATH>
+      # srs: "EPSG:3857"
+      # ############# 
       type: XYZ                             # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ 4. FOLDER
-      year: 2022                  # supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
+      year: 2023                  # supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
       location: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/{year}/3857/{z}/{x}/{y}.jpeg
   output_folder: ./output/det/
   tile_size: 256      # per side, in pixels
@@ -27,14 +31,20 @@ generate_tilesets.py:
   COCO_metadata:
     year: 2024
     version: 1.0
-    description: Energy facilities
-    contributor: swisstopo
-    url: https://swisstopo.ch
+    description: Energy facility
+    contributor: NE, GE, VD
+    url: unknown
     license:
       name: unknown
       url: unknown
     categories_file: ./data/category_ids.json
 
+# Create an image mask keeping the buildings visible (optional)
+mask_building.py:
+  working_dir: ./data/
+  image_dir: tiles/
+  buildings_shp: layers/building_footprint_swissTLM3D_VD.gpkg
+  transparency: True
 
 # Object detection with the optimised trained model
 make_detections.py:
@@ -45,22 +55,24 @@ make_detections.py:
     oth: COCO_oth.json
   detectron2_config_file: ../../config/detectron2_config.yaml # path relative to the working_folder
   model_weights:
-    pth_file: ../../models/model_0002999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
+    pth_file: ../../models/model_0014999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
   image_metadata_json: img_metadata.json
   rdp_simplification:   # rdp = Ramer-Douglas-Peucker
-    enabled: true
-    epsilon: 2.0        # cf. https://rdp.readthedocs.io/en/latest/
+    enabled: False
+    epsilon: 0.2       # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
-  remove_det_overlap: False  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
-
+  remove_det_overlap: True  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
 
 # Assess the final results
 merge_detections.py:
-  working_dir: ./output/det/
+  working_dir: ./output/trne/
+  labels: labels.geojson
   detections:
-    oth: oth_detections_at_0dot05_threshold.gpkg
+    trn: trn_detections_at_0dot05_threshold.gpkg
+    val: val_detections_at_0dot05_threshold.gpkg
+    tst: tst_detections_at_0dot05_threshold.gpkg
   filter_buildings:
-    enable: True
+    enable: False
     buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
   distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
@@ -68,17 +80,3 @@ merge_detections.py:
   assess: 
     enable: False
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
-
-
-# Filtering and merging detection polygons to improve final results
-filter_detections.py:
-  working_dir: ./data
-  detections: ../output/det/merged_detections_at_0dot05_threshold.gpkg
-  buildings: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
-  score_threshold: 0.90 # detection score (from 0 to 1) provided by detectron2
-  area_threshold: 1.0 # m2, area threshold under which polygons are discarded
-
-merge_years.py:
-  working_directory: ./output/det/
-  years: [YEAR1, YEAR2, YEAR3]          # choose year
-  layer: oth_detections_at_0dot3_threshold_year-2020_score-0dot95_area-5000_elevation-1200_distance-10.geojson 
