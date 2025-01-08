@@ -43,7 +43,7 @@ generate_tilesets.py:
       url: unknown
 
 # Create an image mask keeping the buildings visible (optional)
-mask_building.py:
+mask_buildings.py:
   working_dir: ./data/
   image_dir: tiles/
   buildings_shp: layers/building_footprint_swissTLM3D_VD.gpkg
