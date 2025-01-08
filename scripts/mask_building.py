@@ -61,15 +61,15 @@ if __name__ == "__main__":
     os.chdir(WORKING_DIR)
 
     logger.info('Import data...')
-    roofs = gpd.read_file(ROOFS_SHP)
+    buildings_gdf = gpd.read_file(ROOFS_SHP)
     tiles = glob(os.path.join(IMAGE_FOLDER, '*.tif'))
 
-    if roofs.crs != 'epsg:3857':
-        roofs = roofs.to_crs(epsg=3857)
+    if buildings_gdf.crs != 'epsg:3857':
+        buildings_gdf = buildings_gdf.to_crs(epsg=3857)
 
     logger.info('Process vector data...')
-    roofs = roofs.buffer(0)
-    merged_roofs_geoms = roofs.unary_union
+    buildings_gdf = buildings_gdf.buffer(0)
+    merged_roofs_geoms = buildings_gdf.unary_union
 
     for tile in tqdm(tiles, desc='Produce masks', total=len(tiles)):
 
