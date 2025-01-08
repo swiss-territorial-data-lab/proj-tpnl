@@ -42,7 +42,7 @@ generate_tilesets.py:
       name: unknown
       url: unknown
 
-# Create an image mask keeping the buildings visible (optional)
+# (optional) Create an image mask keeping the buildings visible
 mask_buildings.py:
   working_dir: ./data/
   image_dir: tiles/
