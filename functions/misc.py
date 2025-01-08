@@ -1,4 +1,7 @@
+import os
 import sys
+from loguru import logger
+from shapely.validation import make_valid
 
 
 def check_validity(poly_gdf, correct=False):
@@ -37,7 +40,24 @@ def check_validity(poly_gdf, correct=False):
 
     return poly_gdf
 
+
+def ensure_dir_exists(dirpath):
+    """Test if a directory exists. If not, make it.  
+
+    Args:
+        dirpath (str): directory path to test
+
+    Returns:
+        dirpath (str): directory path that have been tested
+    """
+
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+        logger.info(f"The directory {dirpath} was created.")
     
+    return dirpath
+
+
 def format_logger(logger):
 
     logger.remove()
