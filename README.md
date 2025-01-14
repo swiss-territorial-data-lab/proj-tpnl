@@ -94,7 +94,8 @@ The folders/files of the project `proj-tpnl` (in combination with the `object-de
 ├── scripts
 │   ├── mask_buildings.py                           # script applying a building footprint mask to an image 
 │   ├── merge_detections.py                         # script merging adjacent detections and attributing class
-│   └── prepare_data.py                             # script preparing data to be processed by the object-detector scripts
+│   ├── prepare_data.py                             # script preparing data to be processed by the object-detector scripts
+│   └── review_detections.py                        # script matching GT with detections
 ├── .gitignore                                      
 ├── LICENSE
 ├── README.md                                      
@@ -125,6 +126,7 @@ The `proj-tpnl` repository contains scripts to prepare and post-process the data
 1. `prepare_data.py`: format labels and produce tiles to be processed for the object detection.
 2. `mask_buildings.py`: apply a mask to keep only buildings pixel in an image.
 3. `merge_detections.py`: merge adjacent detections cut by tiles into a single detection and attribute the class (the class of the maximum area). It also offers the possbility to filter detections by confidence score and building footprints.
+4. `review_detections.py`: match a shapefile indicating the presence of an energy installation on a building with the detections obtained with the model.
 
 Object detection is performed with tools present in the [`object-detector`](https://github.com/swiss-territorial-data-lab/object-detector) git repository. 
 
@@ -181,6 +183,10 @@ $ stdl-objdet make_detections config/config_det.yaml
 $ python scripts/merge_detections.py config/config_det.yaml
 ```
 
+Review the results:
+```
+$ python scripts/review_detection.py config/config_det.yaml
+```
 
 ## Sandbox
 

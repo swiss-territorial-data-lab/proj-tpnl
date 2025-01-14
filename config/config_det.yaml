@@ -81,6 +81,6 @@ merge_detections.py:
     enable: False
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
 
-result_review.py:
+review_detections.py:
   file: ./input/<SHP_FILE>
   output: ./output/det/
