@@ -4,6 +4,7 @@ lib
 data/*
 !data/category_ids.json
 output/*
+models/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
