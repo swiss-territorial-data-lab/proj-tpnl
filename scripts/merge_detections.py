@@ -169,10 +169,14 @@ if __name__ == "__main__":
     td = len(detections_merge_gdf)
     logger.info(f"... {td} clustered detections remains after shape union")
     
-    # Filter dataframe by score value
+    # Filter dataframe by score value and area
     detections_merge_gdf = detections_merge_gdf[detections_merge_gdf.score > SCORE_THD]
     sc = len(detections_merge_gdf)
     logger.info(f"{td - sc} detections were removed by score filtering (score threshold = {SCORE_THD})")
+
+    detections_merge_gdf = detections_merge_gdf[detections_merge_gdf.area > AREA_THD]
+    ar = len(detections_merge_gdf)
+    logger.info(f"{sc - ar} detections were removed by area filtering (area threshold = {AREA_THD} m2)")
 
     if ASSESS:
         logger.info("Loading labels as a GeoPandas DataFrame...")
