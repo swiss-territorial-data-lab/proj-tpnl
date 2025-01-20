@@ -31,24 +31,35 @@ if __name__ == "__main__":
         cfg = yaml.load(fp, Loader=yaml.FullLoader)[os.path.basename(__file__)]
 
     # Load input parameters
-    FILE = cfg['file']
-    OUTPUT = cfg['output']
+    WORKING_DIR = cfg['working_dir']
+    SUBVENTIONS_SHP = cfg['subventions_shp']
+    BUILDINGS_SHP = cfg['buildings_shp']
+    DETECTIONS_SHP = cfg['detections_shp']
 
-    written_files = [] 
+    os.chdir(WORKING_DIR)
+    logger.info(f'Working directory set to {WORKING_DIR}')
 
-    # Read detections file
-    data = gpd.read_file(FILE)
+    # Read shapefiles
+    subventions_gdf = gpd.read_file(SUBVENTIONS_SHP)
+    buildings_gdf = gpd.read_file(BUILDINGS_SHP)
+    detections_gdf = gpd.read_file(DETECTIONS_SHP)
+    detections_gdf = detections_gdf[detections_gdf['det_category']=='thermal panel']
+    detections_gdf['det_id'] = detections_gdf.index 
 
-    data_gt = data[data['TP_2020'] == 'yes'] 
-    data_det = data[data['detection'] == 'yes'] 
+    buildings_wt_subventions_gdf = gpd.sjoin(buildings_gdf, subventions_gdf, how='left', predicate='intersects', lsuffix='left', rsuffix='right')
+    buildings_wt_subventions_gdf = buildings_wt_subventions_gdf[buildings_wt_subventions_gdf.egid.notnull()].copy()
+    buildings_wt_subventions_gdf = buildings_wt_subventions_gdf.drop_duplicates(subset='id')
+    buildings_wt_detections_gdf = gpd.sjoin(buildings_gdf, detections_gdf, how='inner', predicate='intersects', lsuffix='left', rsuffix='right')
+    buildings_wt_detections_gdf = buildings_wt_detections_gdf[buildings_wt_detections_gdf.det_id.notnull()].copy() 
+    buildings_wt_detections_gdf = buildings_wt_detections_gdf.drop_duplicates(subset='id')
 
-    logger.info(f"Number of GT = {len(data_gt)}")
-    logger.info(f"Number of detection = {len(data_det)}")
-    logger.info("Sucess of detection = " + "{:.0%}".format(len(data_det) / len(data_gt)))
+    buildings_ids = buildings_wt_subventions_gdf.id.unique().tolist()
+    match_buildings_gdf = buildings_wt_detections_gdf[buildings_wt_detections_gdf.id.isin(buildings_ids)]
 
-    logger.info("The following files were written. Let's check them out!")
-    for written_file in written_files:
-        logger.info(written_file)
+    logger.info(f"Number of buildings with a thermal panel subvention = {len(buildings_wt_subventions_gdf)}")
+    logger.info(f"Number of buildings with a thermal panel detection = {len(buildings_wt_detections_gdf)}")
+    logger.info(f"Number of buildings with both subvention and detection = {len(match_buildings_gdf)}")
+    logger.info(f"Subvention detection accuracy = {(len(match_buildings_gdf)/len(buildings_wt_subventions_gdf)*100):.2f}%")
 
     # Stop chronometer  
     toc = time.time()
