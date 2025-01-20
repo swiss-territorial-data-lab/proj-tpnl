@@ -2,7 +2,7 @@
 prepare_data.py:  
   srs: "EPSG:2056"
   datasets:
-    shapefile: ./data/AoI/<AOI_SHPFILE> 
+    shapefile: ./data/AoI/<SHPFILE>
   output_folder: ./output/det/
   zoom_level: 20 
 
@@ -16,11 +16,11 @@ generate_tilesets.py:
     aoi_tiles: ./output/det/tiles.geojson
     image_source:
       # type: FOLDER
-      # year: multi-year                     # Optional, supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
+      # year: 2023                     # Optional, supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
       # location: <IMG_FOLDER_PATH>
       # srs: "EPSG:3857"
       # ############# 
-      type: XYZ                             # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ 4. FOLDER
+      type: XYZ                   # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ 4. FOLDER
       year: 2023                  # supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
       location: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/{year}/3857/{z}/{x}/{y}.jpeg
   output_folder: ./output/det/
@@ -37,13 +37,13 @@ generate_tilesets.py:
     license:
       name: unknown
       url: unknown
-    categories_file: ./data/category_ids.json
+    categories_file: ./data/category_ids.json # Update the file according to the number of classes to be detected
 
 # (optional) Create an image mask keeping the buildings visible
 mask_buildings.py:
   working_dir: ./data/
   image_dir: tiles/
-  buildings_shp: layers/building_footprint_swissTLM3D_VD.gpkg
+  buildings_shp: layers/<SHPFILE>
   transparency: True
 
 # Object detection with the optimised trained model
@@ -55,32 +55,33 @@ make_detections.py:
     oth: COCO_oth.json
   detectron2_config_file: ../../config/detectron2_config.yaml # path relative to the working_folder
   model_weights:
-    pth_file: ../../models/model_0014999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
+    pth_file: ../../models/model_0009999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
   image_metadata_json: img_metadata.json
   rdp_simplification:   # rdp = Ramer-Douglas-Peucker
     enabled: False
     epsilon: 0.2       # cf. https://rdp.readthedocs.io/en/latest/
   score_lower_threshold: 0.05
-  remove_det_overlap: True  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained
+  remove_det_overlap: False  # if several detections overlap (IoU > 0.5), only the one with the highest confidence score is retained. Not recommended for use with a single class.
 
 # Assess the final results
 merge_detections.py:
-  working_dir: ./output/trne/
+  working_dir: ./output/det/
   labels: labels.geojson
   detections:
-    trn: trn_detections_at_0dot05_threshold.gpkg
-    val: val_detections_at_0dot05_threshold.gpkg
-    tst: tst_detections_at_0dot05_threshold.gpkg
+    oth: oth_detections_at_0dot05_threshold.gpkg
   filter_buildings:
     enable: False
-    buildings_shp: ../../data/VD/building_footprint_swissTLM3D_VD.gpkg
+    buildings_shp: ../data/layers/<SHPFILE>
   distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
-  score_threshold: 0.05
+  score_threshold: 0.9
+  area_threshold: 1  # m2, filter out polygons less than this value
   assess: 
     enable: False
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
 
 review_detections.py:
-  file: ./input/<SHP_FILE>
-  output: ./output/det/
+  working_dir: ./output/det/
+  subventions_shp: ../../data/layers/<SHPFILE>
+  buildings_shp: ../../data/layers/<SHPFILE>
+  detections_shp: merged_detections_at_0dot05_threshold.gpkg
