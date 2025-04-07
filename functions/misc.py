@@ -1,5 +1,5 @@
-import os
 import sys
+import geopandas as gpd
 from loguru import logger
 from shapely.validation import make_valid
 
@@ -17,12 +17,9 @@ def check_validity(poly_gdf, correct=False):
 
     invalid_condition = ~poly_gdf.is_valid
 
-    try:
-        assert(poly_gdf[invalid_condition].shape[0]==0), \
-            f"{poly_gdf[invalid_condition].shape[0]} geometries are invalid on" + \
-                    f" {poly_gdf.shape[0]} detections."
-    except Exception as e:
-        logger.warning(e)
+    if poly_gdf[invalid_condition].shape[0]!=0:
+        logger.warning(f"{poly_gdf[invalid_condition].shape[0]} geometries are invalid on {poly_gdf.shape[0]} detections.")
+        
         if correct:
             logger.info("Correction of the invalid geometries with the shapely function 'make_valid'...")
             
@@ -41,23 +38,6 @@ def check_validity(poly_gdf, correct=False):
     return poly_gdf
 
 
-def ensure_dir_exists(dirpath):
-    """Test if a directory exists. If not, make it.  
-
-    Args:
-        dirpath (str): directory path to test
-
-    Returns:
-        dirpath (str): directory path that have been tested
-    """
-
-    if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
-        logger.info(f"The directory {dirpath} was created.")
-    
-    return dirpath
-
-
 def format_logger(logger):
 
     logger.remove()
@@ -71,3 +51,21 @@ def format_logger(logger):
             level="ERROR")
     
     return logger
+
+
+def merge_polygons(gdf, id_name='id'):
+    '''
+    Merge overlapping polygons in a GeoDataFrame.
+
+    - gdf: GeoDataFrame with polygon geometries
+    - id_name (string): name of the index column
+
+    return: a GeoDataFrame with polygons
+    '''
+
+    merge_gdf = gdf.copy()
+    merge_gdf = gpd.GeoDataFrame(geometry=[merge_gdf.geometry.unary_union], crs=gdf.crs) 
+    merge_gdf = merge_gdf.explode(ignore_index=True)
+    merge_gdf[id_name] = merge_gdf.index 
+
+    return merge_gdf

@@ -66,7 +66,7 @@ if __name__ == "__main__":
     for dataset, dets_file in DETECTION_FILES.items():
         detections_ds_gdf = gpd.read_file(dets_file)    
         detections_ds_gdf[f'dataset'] = dataset
-        detections_gdf = pd.concat([detections_gdf, detections_ds_gdf], axis=0).reset_index(drop=True)
+        detections_gdf = pd.concat([detections_gdf, detections_ds_gdf], axis=0, ignore_index=True)
     detections_gdf = detections_gdf.to_crs(2056)
     detections_gdf['area'] = detections_gdf.area 
     detections_gdf['det_id'] = detections_gdf.index
@@ -75,8 +75,7 @@ if __name__ == "__main__":
     logger.success(f"{DONE_MSG} {len(detections_gdf)} features were found.")
 
     if FILTER_BUILDINGS:
-        buildings_gdf = gpd.read_file(BUILDINGS_SHP)
-        buildings_gdf = buildings_gdf.to_crs(2056) 
+        buildings_gdf = gpd.read_file(BUILDINGS_SHP).to_crs(2056) 
         left_join = gpd.sjoin(detections_gdf, buildings_gdf, how='left', predicate='intersects', lsuffix='left', rsuffix='right')
         detections_gdf = left_join[left_join.det_id.notnull()].copy().drop(columns=['index_right']).drop_duplicates()
 
@@ -102,47 +101,51 @@ if __name__ == "__main__":
         detections_gdf = detections_gdf.copy()
         detections_by_year_gdf = detections_gdf[detections_gdf['year_det']==year]
 
-        detections_buffer_gdf = detections_by_year_gdf.copy()
-        detections_buffer_gdf['geometry'] = detections_by_year_gdf.geometry.buffer(DISTANCE, resolution=2)
+        # Merge overlapping polygons
+        detections_merge_overlap_poly_gdf = misc.merge_polygons(detections_by_year_gdf, id_name='det_id')
 
         # Saves the id of polygons contained entirely within the tile (no merging with adjacent tiles), to avoid merging them if they are at a distance of less than thd  
+        detections_buffer_gdf = detections_merge_overlap_poly_gdf.copy()
+        detections_buffer_gdf['geometry'] = detections_buffer_gdf.geometry.buffer(1, join_style='mitre')
         detections_tiles_join_gdf = gpd.sjoin(tiles_gdf, detections_buffer_gdf, how='left', predicate='contains')
         remove_det_list = detections_tiles_join_gdf.det_id.unique().tolist()
-
-        detections_overlap_tiles_gdf = detections_by_year_gdf[~detections_by_year_gdf.det_id.isin(remove_det_list)].drop_duplicates(subset=['det_id'], ignore_index=True)
-        detections_within_tiles_gdf = detections_by_year_gdf[detections_by_year_gdf.det_id.isin(remove_det_list)].drop_duplicates(subset=['det_id'], ignore_index=True)
-
-        # Merge polygons within the thd distance
-        detections_merge_gdf = detections_overlap_tiles_gdf.buffer(DISTANCE, resolution=2).geometry.unary_union
-        detections_merge_gdf = gpd.GeoDataFrame(geometry=[detections_merge_gdf], crs=detections_gdf.crs)  
-        if detections_merge_gdf.isnull().values.any():
-            detections_merge_gdf = gpd.GeoDataFrame()
-        else:
-            detections_merge_gdf = detections_merge_gdf.explode(ignore_index=True)
-            detections_merge_gdf.geometry = detections_merge_gdf.geometry.buffer(-DISTANCE, resolution=2)
-
-        detections_within_tiles_gdf = detections_within_tiles_gdf.drop(['score', 'dataset', 'det_class', 'year_det', 'area'], axis=1)
         
+        detections_within_tiles_gdf = gpd.GeoDataFrame()
+        detections_within_tiles_gdf = detections_buffer_gdf[detections_buffer_gdf.det_id.isin(remove_det_list)].drop_duplicates(subset=['det_id'], ignore_index=True)
+
+        # Merge adjacent polygons between tiles
+        detections_overlap_tiles_gdf = gpd.GeoDataFrame()
+        detections_overlap_tiles_gdf = detections_buffer_gdf[~detections_buffer_gdf.det_id.isin(remove_det_list)].drop_duplicates(subset=['det_id'], ignore_index=True)
+        detections_overlap_tiles_gdf = misc.merge_polygons(detections_overlap_tiles_gdf)
+    
         # Concat polygons contained within a tile and the merged ones
-        detections_merge_gdf = pd.concat([detections_merge_gdf, detections_within_tiles_gdf], axis=0, ignore_index=True)
-        detections_merge_gdf['index_merge'] = detections_merge_gdf.index
+        detections_merge_gdf = pd.concat([detections_overlap_tiles_gdf, detections_within_tiles_gdf], axis=0, ignore_index=True)
+        detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(-1, join_style='mitre')
+
+        # Merge adjacent polygons within the provided thd distance
+        detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(DISTANCE, join_style='mitre')
+        detections_merge_gdf = misc.merge_polygons(detections_merge_gdf)
+        detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(-DISTANCE, join_style='mitre')
+        detections_merge_gdf = detections_merge_gdf.explode(ignore_index=True)
+        detections_merge_gdf['id'] = detections_merge_gdf.index
+
 
         # Spatially join merged detection with raw ones to retrieve relevant information (score, area,...)
+        # Select the class of the largest polygon -> To Do: compute a parameter dependant of the area and the score
+        # Score averaged over all the detection polygon (even if the class is different from the selected one)
         detections_join_gdf = gpd.sjoin(detections_merge_gdf, detections_by_year_gdf, how='inner', predicate='intersects')
 
         det_class_all = []
         det_score_all = []
 
-        for id in detections_merge_gdf.index_merge.unique():
+        for id in detections_merge_gdf.id.unique():
             detections_by_year_gdf = detections_join_gdf.copy()
-            detections_by_year_gdf = detections_by_year_gdf[(detections_by_year_gdf['index_merge']==id)]
+            detections_by_year_gdf = detections_by_year_gdf[(detections_by_year_gdf['id']==id)]
             detections_by_year_gdf = detections_by_year_gdf.rename(columns={'score_left': 'score'})
             det_score_all.append(detections_by_year_gdf['score'].mean())
-            detections_by_year_gdf = misc.check_validity(detections_by_year_gdf, correct=True) 
-            detections_by_year_gdf = detections_by_year_gdf.select_dtypes(exclude=['datetime64[ns, UTC]'])      
             detections_by_year_gdf = detections_by_year_gdf.dissolve(by='det_class', aggfunc='sum', as_index=False)
             if len(detections_by_year_gdf) > 0:
-                detections_by_year_gdf['det_class'] = detections_by_year_gdf.loc[detections_by_year_gdf['area'] == detections_by_year_gdf['area'].max(), 
+                detections_by_year_gdf['det_class'] = detections_by_year_gdf.loc[detections_by_year_gdf['area']==detections_by_year_gdf['area'].max(), 
                                                                 'det_class'].iloc[0]    
                 det_class = detections_by_year_gdf['det_class'].drop_duplicates().tolist()
             else:
@@ -153,8 +156,8 @@ if __name__ == "__main__":
         detections_merge_gdf['score'] = det_score_all
 
         detections_merge_gdf = pd.merge(detections_merge_gdf, detections_join_gdf[
-            ['index_merge', 'dataset', 'year_det']], 
-            on='index_merge')
+            ['id', 'dataset', 'year_det']], 
+            on='id')
         detections_year = pd.concat([detections_year, detections_merge_gdf])
 
     detections_year['det_category'] = [
@@ -167,9 +170,9 @@ if __name__ == "__main__":
     detections_merge_gdf = detections_year.drop_duplicates(subset=['geometry', 'year_det'])
     
     td = len(detections_merge_gdf)
-    logger.info(f"... {td} clustered detections remains after shape union")
+    logger.info(f"... {td} detections remaining after union of the shapes.")
     
-    # Filter dataframe by score value and area
+    # Filter dataframe by score value
     detections_merge_gdf = detections_merge_gdf[detections_merge_gdf.score > SCORE_THD]
     sc = len(detections_merge_gdf)
     logger.info(f"{td - sc} detections were removed by score filtering (score threshold = {SCORE_THD})")
