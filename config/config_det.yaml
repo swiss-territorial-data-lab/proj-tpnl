@@ -4,7 +4,7 @@ prepare_data.py:
   datasets:
     shapefile: ./data/AoI/<SHPFILE>
   output_folder: ./output/det/
-  zoom_level: 20 
+  zoom_level: 20
 
 # Fetch of tiles (online server) and split into 3 datasets: train, test, validation
 generate_tilesets.py:
@@ -15,11 +15,6 @@ generate_tilesets.py:
   datasets:
     aoi_tiles: ./output/det/tiles.geojson
     image_source:
-      # type: FOLDER
-      # year: 2023                     # Optional, supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
-      # location: <IMG_FOLDER_PATH>
-      # srs: "EPSG:3857"
-      # ############# 
       type: XYZ                   # supported values: 1. MIL = Map Image Layer 2. WMS 3. XYZ 4. FOLDER
       year: 2023                  # supported values: 1. multi-year (tiles of different year), 2. <year> (i.e. 2020)
       location: https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/{year}/3857/{z}/{x}/{y}.jpeg
@@ -37,8 +32,8 @@ generate_tilesets.py:
     license:
       name: unknown
       url: unknown
-    categories_file: ./data/category_ids.json # Update the file according to the number of classes to be detected
-
+    categories_file: ./output/trne/category_ids.json
+    
 # (optional) Create an image mask keeping the buildings visible
 mask_buildings.py:
   working_dir: ./data/
