@@ -79,7 +79,7 @@ def get_fractional_sets(dets_gdf, labels_gdf, iou_threshold=0.25, area_threshold
 
     # Detection, resp labels, with IOU lower than threshold value are considered as FP, resp FN, and saved as such
     actual_matches_gdf = best_matches_gdf[best_matches_gdf['IOU'] >= iou_threshold].copy()
-    actual_matches_gdf = actual_matches_gdf.sort_values(by=['IOU'], ascending=False).drop_duplicates(subset=['det_id', 'year_det'])
+    actual_matches_gdf = actual_matches_gdf.sort_values(by=['IOU'], ascending=False).drop_duplicates(subset=['label_id', 'tile_id'])
     actual_matches_gdf['IOU'] = actual_matches_gdf.IOU.round(3)
 
     matched_label_ids = actual_matches_gdf['label_id'].unique().tolist()
@@ -179,7 +179,7 @@ def get_metrics(tp_gdf, fp_gdf, fn_gdf, mismatch_gdf, id_classes=0, method='macr
         p_k[id_cl] = 0 if tp_count == 0 else tp_count / (tp_count + fp_count)
         r_k[id_cl] = 0 if tp_count == 0 else tp_count / (tp_count + fn_count)
         f1_k[id_cl] = 0 if tp_count == 0 else 2 * p_k[id_cl] * r_k[id_cl] / (p_k[id_cl] + r_k[id_cl])
-        count_k[id_cl] = 0 if tp_count == 0 else tp_count + fn_count 
+        count_k[id_cl] = tp_count + fn_count 
 
     accuracy = sum(tp_k.values()) / (sum(tp_k.values()) + sum(fp_k.values()) + sum(fn_k.values()))
 
@@ -193,7 +193,7 @@ def get_metrics(tp_gdf, fp_gdf, fn_gdf, mismatch_gdf, id_classes=0, method='macr
         precision = sum(pw_k.values()) / len(id_classes)
         recall = sum(rw_k.values()) / len(id_classes)
     elif method == 'micro-average':  
-        if sum(tp_k.values()) == 0 and sum(fp_k.values()) == 0:
+        if sum(tp_k.values()) == 0:
             precision = 0
             recall = 0
         else:
@@ -201,7 +201,7 @@ def get_metrics(tp_gdf, fp_gdf, fn_gdf, mismatch_gdf, id_classes=0, method='macr
             recall = sum(tp_k.values()) / (sum(tp_k.values()) + sum(fn_k.values()))
 
     if precision==0 and recall==0:
-        return tp_k, fp_k, fn_k, p_k, r_k, 0, 0, 0
+        return tp_k, fp_k, fn_k, p_k, r_k, 0, 0, 0, 0, 0
     
     f1 = 2 * precision * recall / (precision + recall)
     
