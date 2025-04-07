@@ -65,36 +65,34 @@ def aoi_tiling(gdf, tms='WebMercatorQuad'):
     return tiles_all_gdf
 
 
-def assert_year(gdf1, gdf2, ds, year):
+def assert_year(gdf1, gdf2, ds, year=None):
     """Assert if the year of the dataset is well supported
 
     Args:
         gdf1 (GeoDataFrame): label geodataframe
         gdf2 (GeoDataFrame): other geodataframe to compare columns
         ds (string): dataset type (FP, empty tiles,...)
-        year (string or numeric): attribution of year to tiles
+        year (string or numeric): attribution of year to empty tiles
     """
 
-    if ('year' not in gdf1.keys() and 'year' not in gdf2.keys()) or ('year' not in gdf1.keys() and year == None):
-        pass
-    elif ds == 'FP':
-        if ('year' in gdf1.keys() and 'year' in gdf2.keys()):
-            pass
-        else:
-            logger.error("One input label (GT or FP) shapefile contains a 'year' column while the other one no. Please, standardize the label shapefiles supplied as input data.")
+    labels_w_year = 'year' in gdf1.keys()
+    oth_tiles_w_year = 'year' in gdf2.keys()
+
+    if labels_w_year: 
+        if not oth_tiles_w_year:
+            if ds == 'empty_tiles' and year is None:
+                logger.error("Year provided for labels, but not for empty tiles.")
+                sys.exit(1)
+            elif ds == 'FP':
+                logger.error("Year provided for labels, but not for FP tiles.")
+                sys.exit(1)
+    else:
+        if oth_tiles_w_year:
+            logger.error(f"Year provided for the {ds.replace('_', ' ')} tiles, but not for the labels.")
             sys.exit(1)
-    elif ds == 'empty_tiles':
-        if ('year' in gdf1.keys() and 'year' in gdf2.keys()) or ('year' in gdf1.keys() and year != None):
-            pass        
-        elif 'year' in gdf1.keys() and 'year' not in gdf2.keys():
-            logger.error("A 'year' column is provided in the GT shapefile but not for the empty tiles. Please, standardize the label shapefiles supplied as input data.")
+        elif year != None: 
+            logger.error(f"A year is provided as parameter, but no year available in the label attributes.")
             sys.exit(1)
-        elif 'year' in gdf1.keys() and year == None:
-            logger.error("A 'year' column is provided in the GT shapefile but no year info for the empty tiles. Please, provide a value to 'empty_tiles_year' in the configuration file.")
-            sys.exit(1)
-        elif ('year' not in gdf1.keys() and 'year' not in gdf2.keys()) and ('year' not in gdf1.keys() and year != None):
-            logger.error("A year is provided for the empty tiles while no 'year' column is provided in the groud truth shapefile. Please, standardize the shapefiles or the year value in the configuration file.")
-            sys.exit(1)    
 
 
 def bbox(bounds):
@@ -118,6 +116,46 @@ def bbox(bounds):
                     [minx, maxy]])
 
 
+def prepare_labels(shpfile, written_files, category=None, class_selection=None, canton_selection=None, prefix=''):
+
+    labels_gdf = gpd.read_file(shpfile)
+    labels_gdf = misc.check_validity(labels_gdf, correct=True)
+    if 'year' in labels_gdf.keys():
+        labels_gdf['year'] = labels_gdf.year.astype(int)
+        labels_4326_gdf = labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry', 'year'])
+    else:
+        labels_4326_gdf = labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry'])
+
+    nb_labels = len(labels_4326_gdf)
+    logger.info(f"There are {nb_labels} polygons in {os.path.basename(shpfile)}")
+
+    if canton_selection:
+        labels_4326_gdf = labels_4326_gdf[labels_4326_gdf['canton'].isin(canton_selection)]
+        logger.info(f'Select data by canton: {canton_selection}')
+    if class_selection:
+        labels_4326_gdf = labels_4326_gdf[labels_4326_gdf[category].isin(class_selection)]
+        logger.info(f'Select data by class: {class_selection}')
+    nb_labels_filtered = len(labels_4326_gdf)
+    logger.info(f'There are {nb_labels_filtered} remaining polygons')
+
+    if category and category in labels_4326_gdf.keys():
+        labels_4326_gdf['CATEGORY'] = labels_4326_gdf[category]
+        category = labels_4326_gdf['CATEGORY'].unique()
+        logger.info(f'Working with {len(category)} class.es: {category}')
+        labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
+    else:
+        logger.warning(f'No category column in {shpfile}. A unique category will be assigned')
+        labels_4326_gdf['CATEGORY'] = 'energy facility'
+        labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
+
+    labels_filepath = os.path.join(OUTPUT_DIR, f'{prefix}labels.geojson')
+    labels_4326_gdf.to_file(labels_filepath, driver='GeoJSON')
+    written_files.append(labels_filepath)  
+    logger.success(f"{DONE_MSG} A file was written: {labels_filepath}")
+
+    return labels_4326_gdf, written_files
+
+
 if __name__ == "__main__":
 
     # Start chronometer
@@ -138,94 +176,35 @@ if __name__ == "__main__":
     OUTPUT_DIR = cfg['output_folder']
     SHPFILE = cfg['datasets']['shapefile']
     FP_SHPFILE = cfg['datasets']['fp_shapefile'] if 'fp_shapefile' in cfg['datasets'].keys() else None
-    EPT_YEAR = cfg['datasets']['empty_tiles_year'] if 'empty_tiles_year' in cfg['datasets'].keys() else None
-    if 'empty_tiles_aoi' in cfg['datasets'].keys() and 'empty_tiles_shp' in cfg['datasets'].keys():
-        logger.error("Choose between supplying an AoI shapefile ('empty_tiles_aoi') in which empty tiles will be selected, or a shapefile with selected empty tiles ('empty_tiles_shp')")
-        sys.exit(1)    
-    elif 'empty_tiles_aoi' in cfg['datasets'].keys():
-        EPT_SHPFILE = cfg['datasets']['empty_tiles_aoi']
-        EPT = 'aoi'
-    elif 'empty_tiles_shp' in cfg['datasets'].keys():
-        EPT_SHPFILE = cfg['datasets']['empty_tiles_shp'] 
-        EPT = 'shp'
+    if 'empty_tiles' in cfg['datasets'].keys():
+        EPT_TYPE = cfg['datasets']['empty_tiles']['type']
+        EPT_SHPFILE = cfg['datasets']['empty_tiles']['shapefile']
+        EPT_YEAR = cfg['datasets']['empty_tiles']['year'] if 'year' in cfg['datasets']['empty_tiles'].keys() else None
     else:
         EPT_SHPFILE = None
-        EPT = None
-    CATEGORY = cfg['datasets']['category'] if 'category' in cfg['datasets'].keys() else None
-    CLASS_SELEC = cfg['datasets']['class_selection'] if 'class_selection' in cfg['datasets'].keys() else None
-    CANTON_SELEC = cfg['datasets']['canton_selection'] if 'canton_selection' in cfg['datasets'].keys() else None   
+        EPT_TYPE = None
+        EPT_YEAR = None
+    CATEGORY = cfg['datasets']['category'] if 'category' in cfg['datasets'].keys() else False
+    CLASS_SELECTION = cfg['datasets']['class_selection'] if 'class_selection' in cfg['datasets'].keys() else None
+    CANTON_SELECTION = cfg['datasets']['canton_selection'] if 'canton_selection' in cfg['datasets'].keys() else None  
     ZOOM_LEVEL = cfg['zoom_level']
 
     # Create an output directory in case it doesn't exist
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     written_files = []
     
     # Prepare the tiles
 
     ## Convert datasets shapefiles into geojson format
-    logger.info('Convert labels shapefile into GeoJSON format (EPSG:4326)...')
-    labels_gdf = gpd.read_file(SHPFILE)
-    labels_gdf = misc.check_validity(labels_gdf, correct=True)
-    if 'year' in labels_gdf.keys():
-        labels_gdf['year'] = labels_gdf.year.astype(int)
-        labels_4326_gdf = labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry', 'year'])
-    else:
-        labels_4326_gdf = labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry'])
-    nb_labels = len(labels_4326_gdf)
-    logger.info(f'There are {nb_labels} polygons in {SHPFILE}')
+    logger.info('Convert the label shapefiles into GeoJSON format (EPSG:4326)...')
+    labels_4326_gdf, written_files = prepare_labels(SHPFILE, written_files, CATEGORY, CLASS_SELECTION, CANTON_SELECTION)
+    gt_labels_4326_gdf = labels_4326_gdf[['geometry', 'CATEGORY', 'SUPERCATEGORY']].copy()
 
-    if CANTON_SELEC or CLASS_SELEC:
-        logger.info(f'Filter the label shapefile')
-        if CANTON_SELEC:
-            labels_4326_gdf = labels_4326_gdf[labels_4326_gdf['canton'].isin(CANTON_SELEC)]
-        if CLASS_SELEC:
-            labels_4326_gdf = labels_4326_gdf[labels_4326_gdf[CATEGORY].isin(CLASS_SELEC)]
-        nb_labels_filtered = len(labels_4326_gdf)
-        logger.info(f'There are {nb_labels_filtered} remaining polygons')
-
-    if CATEGORY and CATEGORY in labels_4326_gdf.keys():
-        labels_4326_gdf['CATEGORY'] = labels_4326_gdf[CATEGORY]
-        category = labels_4326_gdf['CATEGORY'].unique()
-        logger.info(f'Working with {len(category)} class.es: {category}')
-        labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
-    else:
-        logger.warning(f'No category column in {SHPFILE}. A unique category will be assigned')
-        labels_4326_gdf['CATEGORY'] = 'energy facility'
-        labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
-
-    gt_labels_4326_gdf = labels_4326_gdf.copy()
-    
-    label_filename = 'labels.geojson'
-    label_filepath = os.path.join(OUTPUT_DIR, label_filename)
-    gt_labels_4326_gdf.to_file(label_filepath, driver='GeoJSON')
-    written_files.append(label_filepath)  
-    logger.success(f"{DONE_MSG} A file was written: {label_filepath}")
-
-    # Add FP label dataset if it exists
+    # Add FP labels if it exists
     if FP_SHPFILE:
-        fp_labels_gdf = gpd.read_file(FP_SHPFILE)
-        assert_year(fp_labels_gdf, labels_gdf, 'FP', EPT_YEAR) 
-        if 'year' in fp_labels_gdf.keys():
-            fp_labels_gdf['year'] = fp_labels_gdf.year.astype(int)
-            fp_labels_4326_gdf = fp_labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry', 'year'])
-        else:
-            fp_labels_4326_gdf = fp_labels_gdf.to_crs(epsg=4326).drop_duplicates(subset=['geometry'])
-        if CATEGORY:
-            fp_labels_4326_gdf['CATEGORY'] = fp_labels_4326_gdf[CATEGORY]
-        else:
-            fp_labels_4326_gdf['CATEGORY'] = 'energy facility'
-        fp_labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
-
-        nb_fp_labels = len(fp_labels_4326_gdf)
-        logger.info(f"There are {nb_fp_labels} polygons in {FP_SHPFILE}")
-
-        filename = 'FP.geojson'
-        filepath = os.path.join(OUTPUT_DIR, filename)
-        fp_labels_4326_gdf.to_file(filepath, driver='GeoJSON')
-        written_files.append(filepath)  
-        logger.success(f"{DONE_MSG} A file was written: {filepath}")
+        logger.info('Convert the FP label shapefiles into GeoJSON format (EPSG:4326)...')
+        fp_labels_4326_gdf, written_files = prepare_labels(FP_SHPFILE, written_files, CATEGORY, CLASS_SELECTION, CANTON_SELECTION, prefix='FP_')
         labels_4326_gdf = pd.concat([labels_4326_gdf, fp_labels_4326_gdf], ignore_index=True)
 
     # Tiling of the AoI
@@ -241,7 +220,7 @@ if __name__ == "__main__":
         EPT_aoi_4326_gdf = EPT_aoi_gdf.to_crs(epsg=4326)
         assert_year(labels_4326_gdf, EPT_aoi_4326_gdf, 'empty_tiles', EPT_YEAR)
         
-        if EPT == 'aoi':
+        if EPT_TYPE == 'aoi':
             logger.info("- Get AoI boundaries")  
             EPT_aoi_boundaries_df = EPT_aoi_4326_gdf.bounds
 
@@ -256,16 +235,13 @@ if __name__ == "__main__":
                     empty_tiles_4326_aoi_gdf['year'] = int(EPT_YEAR)
                 else:
                     empty_tiles_4326_aoi_gdf['year'] = np.random.randint(low=EPT_YEAR[0], high=EPT_YEAR[1], size=(len(empty_tiles_4326_aoi_gdf)))
-            elif EPT_SHPFILE and EPT_YEAR: 
-                logger.warning("No year column in the label shapefile. The provided empty tile year will be ignored.")
-        elif EPT == 'shp':
+        elif EPT_TYPE == 'shp':
             if EPT_YEAR:
                 logger.warning("A shapefile of selected empty tiles are provided. The year set for the empty tiles in the configuration file will be ignored")
                 EPT_YEAR = None
             empty_tiles_4326_aoi_gdf = EPT_aoi_4326_gdf.copy()
 
     # Get all the tiles in one gdf 
-    if EPT_SHPFILE:
         logger.info("- Concatenate label tiles and empty AoI tiles") 
         tiles_4326_all_gdf = pd.concat([tiles_4326_labels_gdf, empty_tiles_4326_aoi_gdf])
     else: 
@@ -278,8 +254,7 @@ if __name__ == "__main__":
     tiles_4326_all_gdf = tiles_4326_all_gdf.apply(add_tile_id, axis=1)
 
     # - Remove duplicated tiles
-    if nb_labels > 1:
-        tiles_4326_all_gdf.drop_duplicates(['id'], inplace=True)
+    tiles_4326_all_gdf.drop_duplicates(['id'], inplace=True)
 
     nb_tiles = len(tiles_4326_all_gdf)
     logger.info(f"There were {nb_tiles} tiles created")
@@ -296,8 +271,7 @@ if __name__ == "__main__":
 
     # Save tile shapefile
     logger.info("Export tiles to GeoJSON (EPSG:4326)...")  
-    tile_filename = 'tiles.geojson'
-    tile_filepath = os.path.join(OUTPUT_DIR, tile_filename)
+    tile_filepath = os.path.join(OUTPUT_DIR, 'tiles.geojson')
     tiles_4326_all_gdf.to_file(tile_filepath, driver='GeoJSON')
     written_files.append(tile_filepath)  
     logger.success(f"{DONE_MSG} A file was written: {tile_filepath}")

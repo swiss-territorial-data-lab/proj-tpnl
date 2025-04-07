@@ -79,10 +79,10 @@ if __name__ == "__main__":
             with rasterio.open(tile) as src:
                 mask_image, mask_transform = mask(src, geoms_list)
                 mask_meta = src.meta
-
+                
             mask_meta.update({'transform': mask_transform})
-            filepath = os.path.join(misc.ensure_dir_exists(os.path.join(IMAGE_FOLDER, 'masked_images')),
-                                os.path.splitext(os.path.basename(tile))[0] + '.tif')
+            filepath = os.path.join(os.makedirs((os.path.join(IMAGE_FOLDER, 'masked_images')),
+                                os.path.splitext(os.path.basename(tile))[0] + '.tif'), exist_ok=True)
             
             with rasterio.open(filepath, 'w', **mask_meta) as dst:
                 dst.write(mask_image)
@@ -99,10 +99,10 @@ if __name__ == "__main__":
 
             mask_meta = src.meta.copy()
             mask_meta.update({'count': 1, 'dtype': 'uint8', 'nodata': 99})
-
-            filepath = os.path.join(misc.ensure_dir_exists(os.path.join(IMAGE_FOLDER, 'mask')),
-                                    os.path.splitext(os.path.basename(tile))[0] + '.tif')    
-
+   
+            filepath = os.path.join(os.makedirs((os.path.join(IMAGE_FOLDER, 'mask')),
+                                os.path.splitext(os.path.basename(tile))[0] + '.tif'), exist_ok=True)
+            
             with rasterio.open(filepath, 'w', **mask_meta) as dst:
                 dst.write(mask_image, 1)
 
