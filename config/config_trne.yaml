@@ -107,7 +107,7 @@ merge_detections.py:
     buildings_shp: ../../data/layers/<SHPFILE>
   distance: 0.25  # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
-  score_threshold: 0.05 # choose a value
+  score_threshold: 0.65 # choose a value
   assess: 
     enable: True
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average

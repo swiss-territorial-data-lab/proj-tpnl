@@ -50,7 +50,7 @@ make_detections.py:
     oth: COCO_oth.json
   detectron2_config_file: ../../config/detectron2_config.yaml # path relative to the working_folder
   model_weights:
-    pth_file: ../../models/model_0009999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
+    pth_file: ../trne/logs/model_0004999.pth # trained model minimising the validation loss curve, monitor the training process via tensorboard (tensorboard --logdir </logs>)
   image_metadata_json: img_metadata.json
   rdp_simplification:   # rdp = Ramer-Douglas-Peucker
     enabled: False
@@ -66,11 +66,11 @@ merge_detections.py:
     oth: oth_detections_at_0dot05_threshold.gpkg
   filter_buildings:
     enable: False
-    buildings_shp: ../data/layers/<SHPFILE>
-  distance: 0.2 # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
+    buildings_shp: ../../data/layers/<SHPFILE>
+  distance: 0.25  # m, distance use as a buffer to merge close polygons (likely to belong to the same object) together
   iou_threshold: 0.1
-  score_threshold: 0.9
-  area_threshold: 1  # m2, filter out polygons less than this value
+  score_threshold: 0.65 # choose a value
+  area_threshold: 0.5  # m2, filter out polygons less than this value
   assess: 
     enable: False
     metrics_method: macro-average   # 1: macro-average ; 2: macro-weighted-average ; 3: micro-average
@@ -79,4 +79,4 @@ review_detections.py:
   working_dir: ./output/det/
   subventions_shp: ../../data/layers/<SHPFILE>
   buildings_shp: ../../data/layers/<SHPFILE>
-  detections_shp: merged_detections_at_0dot05_threshold.gpkg
+  detections_shp: merged_detections_at_0dot65_threshold.gpkg
