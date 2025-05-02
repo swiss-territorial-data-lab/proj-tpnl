@@ -73,11 +73,22 @@ if __name__ == "__main__":
     if 'year_det' in detections_gdf.keys(): 
         detections_gdf['year_det'] = detections_gdf.year_det.astype(int)
     logger.success(f"{DONE_MSG} {len(detections_gdf)} features were found.")
+    
+    # Filter dataframe by score value
+    detections_score_gdf = detections_gdf[detections_gdf.score > SCORE_THD]
+    sc = len(detections_score_gdf)
+    logger.info(f"{len(detections_gdf) - sc} detections were removed by score filtering (score threshold = {SCORE_THD})")
+    detections_gdf = detections_score_gdf.copy()
 
     if FILTER_BUILDINGS:
         buildings_gdf = gpd.read_file(BUILDINGS_SHP).to_crs(2056) 
         left_join = gpd.sjoin(detections_gdf, buildings_gdf, how='left', predicate='intersects', lsuffix='left', rsuffix='right')
-        detections_gdf = left_join[left_join.det_id.notnull()].copy().drop(columns=['index_right']).drop_duplicates()
+        detections_gdf = left_join[left_join.id.notnull()].copy().drop(columns=['index_right']).drop_duplicates()
+        detections_gdf.drop(
+        columns=buildings_gdf.drop(columns='geometry').columns.to_list(), 
+        errors='ignore', 
+        inplace=True
+        )
 
     # get classe ids
     filepath = open(os.path.join('category_ids.json'))
@@ -106,7 +117,7 @@ if __name__ == "__main__":
 
         # Saves the id of polygons contained entirely within the tile (no merging with adjacent tiles), to avoid merging them if they are at a distance of less than thd  
         detections_buffer_gdf = detections_merge_overlap_poly_gdf.copy()
-        detections_buffer_gdf['geometry'] = detections_buffer_gdf.geometry.buffer(1, join_style='mitre')
+        detections_buffer_gdf['geometry'] = detections_buffer_gdf.geometry.buffer(DISTANCE, join_style='mitre')
         detections_tiles_join_gdf = gpd.sjoin(tiles_gdf, detections_buffer_gdf, how='left', predicate='contains')
         remove_det_list = detections_tiles_join_gdf.det_id.unique().tolist()
         
@@ -120,15 +131,9 @@ if __name__ == "__main__":
     
         # Concat polygons contained within a tile and the merged ones
         detections_merge_gdf = pd.concat([detections_overlap_tiles_gdf, detections_within_tiles_gdf], axis=0, ignore_index=True)
-        detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(-1, join_style='mitre')
-
-        # Merge adjacent polygons within the provided thd distance
-        detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(DISTANCE, join_style='mitre')
-        detections_merge_gdf = misc.merge_polygons(detections_merge_gdf)
         detections_merge_gdf['geometry'] = detections_merge_gdf.geometry.buffer(-DISTANCE, join_style='mitre')
         detections_merge_gdf = detections_merge_gdf.explode(ignore_index=True)
         detections_merge_gdf['id'] = detections_merge_gdf.index
-
 
         # Spatially join merged detection with raw ones to retrieve relevant information (score, area,...)
         # Select the class of the largest polygon -> To Do: compute a parameter dependant of the area and the score
@@ -171,15 +176,6 @@ if __name__ == "__main__":
     
     td = len(detections_merge_gdf)
     logger.info(f"... {td} detections remaining after union of the shapes.")
-    
-    # Filter dataframe by score value
-    detections_merge_gdf = detections_merge_gdf[detections_merge_gdf.score > SCORE_THD]
-    sc = len(detections_merge_gdf)
-    logger.info(f"{td - sc} detections were removed by score filtering (score threshold = {SCORE_THD})")
-
-    detections_merge_gdf = detections_merge_gdf[detections_merge_gdf.area > AREA_THD]
-    ar = len(detections_merge_gdf)
-    logger.info(f"{sc - ar} detections were removed by area filtering (area threshold = {AREA_THD} m2)")
 
     if ASSESS:
         logger.info("Loading labels as a GeoPandas DataFrame...")
@@ -267,6 +263,8 @@ if __name__ == "__main__":
 
     # Save processed results
     feature = os.path.join(f'merged_detections_at_{SCORE_THD}_threshold.gpkg'.replace('0.', '0dot'))
+    if FILTER_BUILDINGS:
+        feature = feature.replace('.', '_filter_buildings.', 1)
     detections_merge_gdf = detections_merge_gdf.to_crs(2056)
     detections_merge_gdf[['geometry', 'score', 'det_class', 'det_category', 'year_det']]\
         .to_file(feature, driver='GPKG', index=False)
