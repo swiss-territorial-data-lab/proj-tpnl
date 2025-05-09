@@ -29,7 +29,7 @@ The project has been run on a 32 GiB RAM machine with a 16 GiB GPU (NVIDIA Tesla
 - PyTorch version 1.10
 - CUDA version 11.3
 - GDAL version 3.0.4
-- object-detector version [2.3.2](https://github.com/swiss-territorial-data-lab/object-detector/releases/tag/v2.3.2)
+- object-detector version [2.3.4](https://github.com/swiss-territorial-data-lab/object-detector/releases/tag/v.2.3.4)
 
 ### Installation
 
@@ -109,7 +109,7 @@ The folders/files of the project `proj-tpnl` (in combination with the `object-de
 Below, the description of input data used for this project. 
 
 - images: [_SWISSIMAGE Journey_](https://map.geo.admin.ch/#/map?lang=fr&center=2660000,1190000&z=1&bgLayer=ch.swisstopo.pixelkarte-farbe&topic=ech&layers=ch.swisstopo.swissimage-product@year=2024;ch.swisstopo.swissimage-product.metadata@year=2024) is an annual dataset of aerial images of Switzerland from 1946 to today. The images are downloaded from the [geo.admin.ch](https://www.geo.admin.ch/fr) server using [XYZ](https://api3.geo.admin.ch/services/sdiservices.html#xyz) connector. 
-- ground truth: labels vectorized by experts in the field. We have the ground truth for the Canton of Argau (FHNW), the Canton of Neucĥatel and the Canton of Geneva vectorized for the year 2020 and for the Canton of Vaud vectorized for the year 2023.
+- ground truth: labels vectorized by experts in the field. We have the ground truth for the Canton of Argau (FHNW), the Canton of Neuchâtel and the Canton of Geneva vectorized for the year 2020 and for the Canton of Vaud vectorized for the year 2023.
 - building footprints: provided by the [swissTLM3D](https://www.swisstopo.admin.ch/fr/modele-du-territoire-swisstlm3d).
 - category_ids.json: categories attributed to the detections.
 - models: the trained models used to produce the results presented in the documentation are available on request.
@@ -138,45 +138,45 @@ The workflow can be executed by running the following list of actions and comman
 **Training and evaluation**: 
 
 Prepare the data:
-```
+```bash
 $ python scripts/prepare_data.py config/config_trne.yaml
 $ stdl-objdet generate_tilesets config/config_trne.yaml
 ```
 
 A mask can be applied on the images to keep only building pixels (optional):
-```
+```bash
 $ python scripts/result_analysis.py config/config_trne.yaml
 ```
 
 Train the model:
-```
+```bash
 $ stdl-objdet train_model config/config_trne.yaml
 $ tensorboard --logdir output/trne/logs
 ```
 
-Open the following link with a web browser: `http://localhost:6006` and identify the iteration minimising the validation loss and select the model accordingly (`model_*.pth`) in `config_trne`. For the provided parameters, `model_0009999.pth` is the default one.
+Open the following link with a web browser: `http://localhost:6006` and identify the iteration minimising the validation loss and select the model accordingly (`model_*.pth`) in `config_trne`. For the provided parameters, `model_0004999.pth` is the default one.
 
 Perform and assess detections:
-```
+```bash
 $ stdl-objdet make_detections config/config_trne.yaml
 $ stdl-objdet assess_detections config/config_trne.yaml
 ```
 
 Finally, the detection obtained by tiles can be merged when adjacent and a new assessment is performed:
-```
+```bash
 $ python scripts/merge_detections.py config/config_trne.yaml
 ```
 
 **Inference**: 
 
 Copy the selected trained model to the folder `models`:
-```
+```bash
 $ mkdir models
 $ cp output/trne/logs/<selected_model_pth> models
 ```
 
 Process images:
-```
+```bash
 $ python scripts/prepare_data.py config/config_det.yaml
 $ stdl-objdet generate_tilesets config/config_det.yaml
 $ stdl-objdet make_detections config/config_det.yaml
@@ -184,7 +184,7 @@ $ python scripts/merge_detections.py config/config_det.yaml
 ```
 
 Review the results:
-```
+```bash
 $ python scripts/review_detection.py config/config_det.yaml
 ```
 
@@ -197,7 +197,7 @@ Additional scripts originated from previous version of the project are loacted i
 
 `proj-tpnl` was made possible with the help of several contributors (alphabetical):
 
-Alessandro Cerioni, Nils Hamel, Clémence Herny, Adrian Meyer, Huriel Reichel
+Alessandro Cerioni, Nils Hamel, Clémence Herny, Adrian Meyer, Huriel Reichel, Gwenaëlle Salamin
 
 ## Disclaimer
 
