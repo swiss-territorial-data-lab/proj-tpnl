@@ -82,8 +82,8 @@ if __name__ == "__main__":
 
     if FILTER_BUILDINGS:
         buildings_gdf = gpd.read_file(BUILDINGS_SHP).to_crs(2056) 
-        left_join = gpd.sjoin(detections_gdf, buildings_gdf, how='left', predicate='intersects', lsuffix='left', rsuffix='right')
-        detections_gdf = left_join[left_join.id.notnull()].copy().drop(columns=['index_right']).drop_duplicates()
+        left_join = gpd.sjoin(detections_gdf, buildings_gdf, how='left', predicate='intersects', lsuffix='det', rsuffix='building')
+        detections_gdf = left_join[left_join.id.notnull()].copy().drop(columns=['index_building']).drop_duplicates()
         detections_gdf.drop(
         columns=buildings_gdf.drop(columns='geometry').columns.to_list(), 
         errors='ignore', 
