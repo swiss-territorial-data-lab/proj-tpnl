@@ -131,17 +131,17 @@ def prepare_labels(shpfile, written_files, category=None, class_selection=None, 
 
     if canton_selection:
         labels_4326_gdf = labels_4326_gdf[labels_4326_gdf['canton'].isin(canton_selection)]
-        logger.info(f'Select data by canton: {canton_selection}')
+        logger.info(f'Select data by canton: ' + ', '.join(map(str, canton_selection)))
     if class_selection:
         labels_4326_gdf = labels_4326_gdf[labels_4326_gdf[category].isin(class_selection)]
-        logger.info(f'Select data by class: {class_selection}')
+        logger.info(f'Select data by class: ' + ', '.join(map(str, class_selection)))
     nb_labels_filtered = len(labels_4326_gdf)
     logger.info(f'There are {nb_labels_filtered} remaining polygons')
 
     if category and category in labels_4326_gdf.keys():
         labels_4326_gdf['CATEGORY'] = labels_4326_gdf[category]
-        category = labels_4326_gdf['CATEGORY'].unique()
-        logger.info(f'Working with {len(category)} class.es: {category}')
+        classes = labels_4326_gdf['CATEGORY'].unique()
+        logger.info(f'Working with {len(classes)} class.es: ' + ', '.join(map(str, classes)))
         labels_4326_gdf['SUPERCATEGORY'] = 'energy facility'
     else:
         logger.warning(f'No category column in {shpfile}. A unique category will be assigned')
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         EPT_SHPFILE = None
         EPT_TYPE = None
         EPT_YEAR = None
-    CATEGORY = cfg['datasets']['category'] if 'category' in cfg['datasets'].keys() else False
+    CATEGORY = cfg['datasets']['category'] if 'category' in cfg['datasets'].keys() else None
     CLASS_SELECTION = cfg['datasets']['class_selection'] if 'class_selection' in cfg['datasets'].keys() else None
     CANTON_SELECTION = cfg['datasets']['canton_selection'] if 'canton_selection' in cfg['datasets'].keys() else None  
     ZOOM_LEVEL = cfg['zoom_level']
@@ -241,7 +241,7 @@ if __name__ == "__main__":
                 EPT_YEAR = None
             empty_tiles_4326_aoi_gdf = EPT_aoi_4326_gdf.copy()
 
-    # Get all the tiles in one gdf 
+        # Get all the tiles in one gdf 
         logger.info("- Concatenate label tiles and empty AoI tiles") 
         tiles_4326_all_gdf = pd.concat([tiles_4326_labels_gdf, empty_tiles_4326_aoi_gdf])
     else: 
